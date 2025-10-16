@@ -1,212 +1,355 @@
+**Node.js + Express project** 
 
-# NextBus-Backend
+📁 **src/**
 
-This is the backend service for **NextBus**, built with **Node.js, Express, and MongoDB**.
-It provides authentication APIs (`/register`, `/login`) and can be tested using **Postman**.
+* `controllers/` → API logic (auth, booking, bus, route)
+* `models/` → Mongoose (or DB) schemas
+* `routes/` → Express routes for each module
+* `config/db.js` → Database connection
+* Middleware for authentication (`authMiddleware.js`, `adminMiddleware.js`)
+
+---
+
+## 🚌 NextStop API Documentation
+
+### 📘 Overview
+
+NextStop is a RESTful API for a bus booking platform that includes:
+
+* User authentication
+* Bus and route management (admin)
+* Booking and cancellation system
+* JWT-based authentication middleware
 
 ---
 
 ## 🚀 Getting Started
 
-### 1. Clone the repository
+### 1️⃣ Installation
 
 ```bash
-git clone https://github.com/UdhyaKumarKMIT/NextBus-Backend.git
-cd NextBus-Backend
-```
-
-### 2. Install dependencies
-
-```bash
+git clone https://github.com/your-username/nextstop-backend.git
+cd nextstop-backend
 npm install
 ```
 
-### 3. Start the development server
+### 2️⃣ Setup Environment
+
+Create a `.env` file in the root:
+
+```
+PORT=5000
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_secret_key
+```
+
+### 3️⃣ Start Server
 
 ```bash
-npm run dev
+npm start
 ```
 
-The server will start at:
-👉 `http://localhost:5000`
+Server runs at: `http://localhost:5000/`
 
 ---
 
-## 🛠 Environment Setup
+## 📂 Folder Structure
 
-Make sure you have **MongoDB running locally** (default URI `mongodb://127.0.0.1:27017/auth_demo`).
-
-
----
-Perfect! I can create a **complete API documentation** for your project that you can directly put in your GitHub README. I’ll list all endpoints, HTTP methods, request bodies, and responses. I’ll assume your APIs are modularized as `/auth` (authentication) and `/book` (bus booking/search).
-
----
-
-# **NextBus API **
-
-Base URL: `http://localhost:5000`
-
----
-
-## **1️⃣ Authentication APIs (`/auth`)**
-
-### **Register**
-
-* **Endpoint:** `POST /auth/register`
-* **Request Body (JSON):**
-
-```json
-{
-  "username": "john_doe",
-  "email": "john@example.com",
-  "password": "password123",
-  "confirmPassword": "password123"
-}
 ```
-
-* **Response (Success):**
-
-```json
-{
-  "message": "User registered successfully"
-}
+src/
+├── config/
+│   └── db.js
+├── controllers/
+│   ├── authController.js
+│   ├── bookingController.js
+│   ├── busController.js
+│   └── routeController.js
+├── models/
+│   ├── User.js
+│   ├── Bus.js
+│   ├── Route.js
+│   ├── Booking.js
+│   ├── Feedback.js
+│   └── Payment.js
+├── models/middleware/
+│   ├── authMiddleware.js
+│   └── adminMiddleware.js
+└── routes/
+    ├── authRoutes.js
+    ├── bookingRoutes.js
+    ├── busRoutes.js
+    └── routeRoutes.js
 ```
-
-* **Errors:**
-
-  * Passwords do not match → 400
-  * Username or email already exists → 400
 
 ---
 
-### **Login**
+## 🔐 Authentication Routes (`/api/auth`)
 
-* **Endpoint:** `POST /auth/login`
-* **Request Body (JSON):**
+| Method | Endpoint                    | Description                 | Auth Required |
+| :----: | :-------------------------- | :-------------------------- | :-----------: |
+| `POST` | `/api/auth/register`        | Register a new user         |       ❌       |
+| `POST` | `/api/auth/login`           | Login and receive JWT token |       ❌       |
+| `POST` | `/api/auth/forgot-password` | Request password reset      |       ❌       |
+| `POST` | `/api/auth/reset-password`  | Reset password using token  |       ❌       |
+
+🧠 **Example Login Request**
 
 ```json
+POST /api/auth/login
 {
-  "username": "john_doe",
-  "password": "password123"
+  "email": "user@example.com",
+  "password": "mypassword"
 }
 ```
 
-> You can use either `username` or `email` in the `username` field.
-
-* **Response (Success):**
+Response:
 
 ```json
 {
-  "message": "Login successful"
+  "success": true,
+  "token": "your_jwt_token"
 }
 ```
-
-* **Errors:**
-
-  * User not found → 401
-  * Invalid password → 401
 
 ---
 
-### **Forgot Password**
+## 🚌 Bus Routes (`/api/buses`)
 
-* **Endpoint:** `POST /auth/forgot-password`
-* **Request Body (JSON):**
-
-```json
-{
-  "email": "john@example.com"
-}
-```
-
-* **Response (Success):**
-
-```json
-{
-  "message": "Reset code sent to email"
-}
-```
-
-* **Errors:**
-
-  * User not found → 404
-
-> Sends a 6-digit reset code to the user’s email (valid for 10 minutes).
+|  Method  | Endpoint                        | Description     | Auth |  Role |
+| :------: | :------------------------------ | :-------------- | :--: | :---: |
+|   `GET`  | `/api/buses/`                   | Get all buses   |   ❌  |   -   |
+|   `GET`  | `/api/buses/search?from=A&to=B` | Search buses    |   ❌  |   -   |
+|   `GET`  | `/api/buses/:id`                | Get bus by ID   |   ❌  |   -   |
+|  `POST`  | `/api/buses/add`                | Add new bus     |   ✅  | Admin |
+|   `PUT`  | `/api/buses/:id`                | Update bus info |   ✅  | Admin |
+| `DELETE` | `/api/buses/:id`                | Delete bus      |   ✅  | Admin |
 
 ---
 
-### **Reset Password**
+## 🗺️ Route Management (`/api/routes`)
 
-* **Endpoint:** `POST /auth/reset-password`
-* **Request Body (JSON):**
-
-```json
-{
-  "email": "john@example.com",
-  "code": "123456",
-  "newPassword": "newpassword123"
-}
-```
-
-* **Response (Success):**
-
-```json
-{
-  "message": "Password reset successful"
-}
-```
-
-* **Errors:**
-
-  * Invalid or expired reset code → 400
-  * User not found → 404
+|  Method  | Endpoint          | Description     | Auth |  Role |
+| :------: | :---------------- | :-------------- | :--: | :---: |
+|   `GET`  | `/api/routes/`    | Get all routes  |   ❌  |   -   |
+|   `GET`  | `/api/routes/:id` | Get route by ID |   ❌  |   -   |
+|  `POST`  | `/api/routes/add` | Add a new route |   ✅  | Admin |
+|   `PUT`  | `/api/routes/:id` | Update a route  |   ✅  | Admin |
+| `DELETE` | `/api/routes/:id` | Delete a route  |   ✅  | Admin |
 
 ---
 
-## **2️⃣ Bus Booking APIs (`/book`)**
+## 🎫 Booking Routes (`/api/bookings`)
 
-> Replace `/book` with your router path if different.
+| Method | Endpoint                   | Description                    | Auth |
+| :----: | :------------------------- | :----------------------------- | :--: |
+| `POST` | `/api/bookings/`           | Book a ticket                  |   ✅  |
+|  `PUT` | `/api/bookings/cancel/:id` | Cancel a booking               |   ✅  |
+|  `GET` | `/api/bookings/user`       | View logged-in user’s bookings |   ✅  |
 
-### **Search Buses**
 
-* **Endpoint:** `POST /book/search_bus`
-* **Request Body (JSON):**
-
-```json
-{
-  "source": "Tabaram",
-  "destination": "Trichy",
-  "date": "2025-09-21"
-}
+```
+key: token
+value: <paste JWT token from /login response>
 ```
 
-* **Response (Success):**
+Then under each **protected request**, go to **Authorization → Bearer Token** and set:
 
-```json
-{
-  "buses": [
-    {
-      "busId": "BUS123",
-      "name": "Express Line",
-      "departure": "08:00 AM",
-      "arrival": "12:00 PM",
-      "availableSeats": 20,
-      "fare": 250
-    },
-    {
-      "busId": "BUS456",
-      "name": "Rapid Travels",
-      "departure": "09:30 AM",
-      "arrival": "01:30 PM",
-      "availableSeats": 15,
-      "fare": 280
-    }
-  ]
-}
+```
+{{token}}
 ```
 
-* **Errors:**
+### Step 3 — Example Flow
 
-  * No buses found → 404
+1️⃣ Register → `/api/auth/register`
+2️⃣ Login → copy JWT token
+3️⃣ Add Bus → `/api/buses/add` (as Admin)
+4️⃣ Book Ticket → `/api/bookings/`
+5️⃣ View Bookings → `/api/bookings/user`
+
+---
+
+## 🧰 Tech Stack
+
+* **Node.js** + **Express.js**
+* **MongoDB** with Mongoose
+* **JWT** for Authentication
+* **Postman** for API testing
+
+---
+
+
+# 🚏 Route Management API
+
+API for managing transportation routes. Public can view routes; admins can create, update, and delete them.
+
+## 📍 Base URL
+
+```
+http://localhost:5050/api/routes
+```
+
+## 🔐 Authentication
+
+* **Public Routes**: No authentication
+* **Admin Routes**: Bearer token required
+
+---
+
+## 📘 Endpoints
+
+### 1. Get All Routes
+
+* **GET** `/`
+* **Auth**: Public
+* **Response**: Array of route objects
+
+---
+
+### 2. Get Route by ID
+
+* **GET** `/:id`
+* **Auth**:  Public
+* **Params**:
+
+  * `id`: Route ID
+* **Response**: Single route object
+
+---
+
+### 3. Add New Route
+
+* **POST** `/add`
+* **Auth**: ✅ Admin
+* **Headers**:
+
+  ```
+  Authorization: Bearer <token>
+  Content-Type: application/json
+  ```
+* **Body**:
+
+  ```json
+  {
+    "startPoint": "Madurai",
+    "endPoint": "Chennai",
+    "distance": 460,
+    "duration": "7h 30m"
+  }
+  ```
+* **Response**: Created route object
+
+---
+
+### 4. Update Route
+
+* **PUT** `/:id`
+* **Auth**: ✅ Admin
+* **Headers**:
+
+  ```
+  Authorization: Bearer <token>
+  Content-Type: application/json
+  ```
+* **Params**:
+
+  * `id`: Route ID
+* **Body**:
+
+  ```json
+  {
+    "startPoint": "Updated Start",
+    "endPoint": "Updated End",
+    "distance": 500,
+    "duration": "8h 00m"
+  }
+  ```
+* **Response**: Updated route object
+
+---
+
+### 5. Delete Route
+
+* **DELETE** `/:id`
+* **Auth**: ✅ Admin
+* **Headers**:
+
+  ```
+  Authorization: Bearer <token>
+  ```
+* **Params**:
+
+  * `id`: Route ID
+* **Response**: Success message
+
+
+---
+
+# 🎟️ Booking API
+
+Handles ticket bookings, cancellations, and retrieving user-specific bookings.
+
+## 📍 Base URL
+
+```
+http://localhost:5050/api/bookings
+```
+
+## 🔐 Authentication
+
+* **All Booking Routes**: Require user authentication via Bearer token
+
+---
+
+## 📘 Endpoints
+
+### 1. Book a Ticket
+
+* **POST** `/`
+* **Auth**: ✅ Required
+* **Headers**:
+
+  ```
+  Authorization: Bearer <token>
+  Content-Type: application/json
+  ```
+* **Body**:
+
+  ```json
+  {
+    "bus": "bus_id_here",
+    "seatsBooked": 2,
+    "totalFare": 800
+  }
+  ```
+* **Response**: Booking confirmation object
+
+---
+
+### 2. Cancel a Booking
+
+* **PUT** `/cancel/:id`
+* **Auth**: ✅ Required
+* **Headers**:
+
+  ```
+  Authorization: Bearer <token>
+  ```
+* **Params**:
+
+  * `id`: Booking ID to cancel
+* **Response**: Updated booking object with status `"Cancelled"`
+
+---
+
+### 3. Get User Bookings
+
+* **GET** `/user`
+* **Auth**: ✅ Required
+* **Headers**:
+
+  ```
+  Authorization: Bearer <token>
+  ```
+* **Response**: Array of user’s booking objects
 
 ---

@@ -1,22 +1,20 @@
-// routes/auth_api.js
-const express = require('express');
-const router = express.Router();
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const User = require('./models/User');
+const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
+const User = require('../models/User');
 
-// Configure nodemailer transporter
+// Configure nodemailer
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
-    user: "studycegmit@gmail.com",
-    pass: "zeft dmkc knyn jwby"  // Use App Password
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
   }
 });
 
 // ----------------- REGISTER -----------------
-router.post('/register', async (req, res) => {
+const register = async (req, res) => {
   const { username, email, password, confirmPassword } = req.body;
 
   if (password !== confirmPassword) {
@@ -25,21 +23,22 @@ router.post('/register', async (req, res) => {
 
   try {
     const existingUser = await User.findOne({ $or: [{ username }, { email }] });
-    if (existingUser) return res.status(400).json({ message: "Username or email already exists" });
+    if (existingUser)
+      return res.status(400).json({ message: "Username or email already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({ username, email, password: hashedPassword });
     await newUser.save();
 
-    res.json({ message: "User registered successfully" });
+    res.status(201).json({ message: "User registered successfully" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
   }
-});
+};
 
 // ----------------- LOGIN -----------------
-router.post('/login', async (req, res) => {
+const login = async (req, res) => {
   const { username, password } = req.body;
 
   try {
@@ -48,16 +47,23 @@ router.post('/login', async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: "Invalid password" });
+    const token = jwt.sign(
+      { id: user._id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" } // expires in 1 hour
+    );
+    console.log(token);
 
-    res.json({ message: "Login successful" });
+    // 4️⃣ Send token back
+    res.json({ message: "Login successful", token });  
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
   }
-});
+};
 
 // ----------------- FORGOT PASSWORD -----------------
-router.post('/forgot-password', async (req, res) => {
+const forgotPassword = async (req, res) => {
   const { email } = req.body;
   try {
     const user = await User.findOne({ email });
@@ -80,10 +86,10 @@ router.post('/forgot-password', async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Server error" });
   }
-});
+};
 
 // ----------------- RESET PASSWORD -----------------
-router.post('/reset-password', async (req, res) => {
+const resetPassword = async (req, res) => {
   const { email, code, newPassword } = req.body;
   try {
     const user = await User.findOne({ email });
@@ -104,6 +110,6 @@ router.post('/reset-password', async (req, res) => {
     console.error(err);
     res.status(500).json({ message: "Server error" });
   }
-});
+};
 
-module.exports = router;
+module.exports = { register, login, forgotPassword, resetPassword };
