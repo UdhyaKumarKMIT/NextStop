@@ -59,7 +59,8 @@ const deleteBus = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
-// 🔍 Search Buses (Public with optional type filter)
+
+
 const searchBuses = async (req, res) => {
   try {
     const { startPoint, endPoint, date, type } = req.query;
@@ -70,21 +71,35 @@ const searchBuses = async (req, res) => {
       });
     }
 
-    // Convert date string to Date object (ignore time)
+    // ✅ Step 1: Parse and validate the date
     const searchDate = new Date(date);
-    searchDate.setHours(0, 0, 0, 0);
+    if (isNaN(searchDate)) {
+      return res.status(400).json({ message: "Invalid date format" });
+    }
 
-    // Build query object
+    // Create start and end of the day range (to ignore time differences)
+    const startOfDay = new Date(searchDate.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(searchDate.setHours(23, 59, 59, 999));
+
+    // ✅ Step 2: Find route ID matching start and end points
+    const route = await Route.findOne({ startPoint, endPoint });
+    if (!route) {
+      return res.status(404).json({
+        message: "No route found for the given start and end points",
+      });
+    }
+
+    // ✅ Step 3: Build query
     const query = {
-      route: { $regex: new RegExp(`${startPoint}-${endPoint}`, "i") }, // Example route stored as "Chennai-Bangalore"
-      date: searchDate,
+      route: route._id,
+      date: { $gte: startOfDay, $lte: endOfDay },
       availableSeats: { $gt: 0 },
     };
 
     if (type) query.type = type;
 
-    // Find matching buses
-    const buses = await Bus.find(query);
+    // ✅ Step 4: Find buses
+    const buses = await Bus.find(query).populate("route");
 
     if (!buses.length) {
       return res.status(404).json({
@@ -100,7 +115,6 @@ const searchBuses = async (req, res) => {
     });
   }
 };
-
 
 module.exports = {
   addBus,
