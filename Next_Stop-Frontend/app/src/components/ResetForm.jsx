@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { forgotPassword, resetPassword } from "../services/resetAPI";
+import { useNavigate } from "react-router-dom";
 
 const ResetForm = () => {
   const [step, setStep] = useState(1); // Step 1: send code, Step 2: reset password
@@ -44,8 +45,10 @@ const ResetForm = () => {
       setSuccess(res.message);
       setStep(1); // Optional: redirect or reset form
       setFormData({ email: "", code: "", newPassword: "" });
+
+      window.location.href = "/login";
     } catch (err) {
-      setError(err.message || "Failed to reset password ❌");
+      setError(err.message || "Failed to reset password ");
     }
   };
 

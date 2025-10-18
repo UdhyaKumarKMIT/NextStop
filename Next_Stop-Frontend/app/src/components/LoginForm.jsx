@@ -34,7 +34,7 @@ const LoginForm = () => {
       }
 
       // Redirect to dashboard or home page
-      window.location.href = "/";
+      window.location.href = "/booking";
     } catch (err) {
       setError(err.message || "Login Failed");
     }
