@@ -20,7 +20,8 @@ const addBus = async (req, res) => {
 // Get all buses (Public)
 const getAllBuses = async (req, res) => {
   try {
-    const buses = await Bus.find().populate("route");
+    //const buses = await Bus.find().populate("route");
+    const buses = await Bus.find();
     res.json({ buses });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
@@ -30,7 +31,8 @@ const getAllBuses = async (req, res) => {
 // Get bus by ID
 const getBusById = async (req, res) => {
   try {
-    const bus = await Bus.findById(req.params.id).populate("route");
+    //const bus = await Bus.findById(req.params.id).populate("route");
+    const bus = await Bus.findById(req.params.id);
     if (!bus) return res.status(404).json({ message: "Bus not found" });
     res.json({ bus });
   } catch (err) {
@@ -99,8 +101,8 @@ const searchBuses = async (req, res) => {
     if (type) query.type = type;
 
     // ✅ Step 4: Find buses
-    const buses = await Bus.find(query).populate("route");
-
+    //const buses = await Bus.find(query).populate("route");
+    const buses = await Bus.find(query);
     if (!buses.length) {
       return res.status(404).json({
         message: "No buses found for the selected route/date/type",

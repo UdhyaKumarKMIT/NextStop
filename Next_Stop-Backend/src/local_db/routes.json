@@ -1,0 +1,63 @@
+[
+    {
+      "startPoint": "Chennai",
+      "endPoint": "Bangalore",
+      "distance": 350,
+      "duration": "6h 30m"
+    },
+    {
+      "startPoint": "Chennai",
+      "endPoint": "Hyderabad",
+      "distance": 625,
+      "duration": "10h 30m"
+    },
+    {
+      "startPoint": "Chennai",
+      "endPoint": "Coimbatore",
+      "distance": 500,
+      "duration": "8h 0m"
+    },
+    {
+      "startPoint": "Chennai",
+      "endPoint": "Madurai",
+      "distance": 460,
+      "duration": "7h 45m"
+    },
+    {
+      "startPoint": "Bangalore",
+      "endPoint": "Hyderabad",
+      "distance": 570,
+      "duration": "9h 45m"
+    },
+    {
+      "startPoint": "Bangalore",
+      "endPoint": "Coimbatore",
+      "distance": 400,
+      "duration": "7h 0m"
+    },
+    {
+      "startPoint": "Bangalore",
+      "endPoint": "Madurai",
+      "distance": 435,
+      "duration": "7h 15m"
+    },
+    {
+      "startPoint": "Hyderabad",
+      "endPoint": "Coimbatore",
+      "distance": 750,
+      "duration": "12h 0m"
+    },
+    {
+      "startPoint": "Hyderabad",
+      "endPoint": "Madurai",
+      "distance": 780,
+      "duration": "12h 30m"
+    },
+    {
+      "startPoint": "Coimbatore",
+      "endPoint": "Madurai",
+      "distance": 200,
+      "duration": "4h 0m"
+    }
+  ]
+  

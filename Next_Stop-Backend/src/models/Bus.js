@@ -7,11 +7,11 @@ const busSchema = new mongoose.Schema({
   totalSeats: { type: Number, required: true },
   availableSeats: { type: Number, required: true },
   fare: { type: Number, required: true },
-  from_route: { type: String, required: true },
-  to_route: { type: String, required: true },
+  route: { type: mongoose.Schema.Types.ObjectId, ref: "Routes", required: true }, 
   departureTime: { type: String, required: true },
   arrivalTime: { type: String, required: true },
   date: { type: Date, required: true },
 });
+
 
 module.exports = mongoose.model("Bus", busSchema);
