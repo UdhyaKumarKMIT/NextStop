@@ -15,8 +15,10 @@
     npm install -D tailwindcss@3
     npx tailwindcss init -p
 
-# Qr code
-    npm install qrcode.react
-
 # email service
     npm install emailjs-com
+
+# If you face any issues with react-scripts then reinstall it in app folder 
+    rm -rf node_modules package-lock.json
+    npm cache clean --force
+    npm install

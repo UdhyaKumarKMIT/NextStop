@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:5000"; // Change to your backend URL
+const API_BASE_URL = "http://localhost:5050/api"; // Change to your backend URL
 
 // Send reset code to email
 export const forgotPassword = async (email) => {

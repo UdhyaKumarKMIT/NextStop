@@ -27,8 +27,10 @@ const ResetForm = () => {
       const res = await forgotPassword(formData.email);
       setSuccess(res.message);
       setStep(2); // Move to reset password step
+
+      
     } catch (err) {
-      setError(err.message || "Failed to send reset code ❌");
+      setError(err.message || "Failed to send reset code ");
     }
   };
 

@@ -25,15 +25,18 @@ const LoginForm = () => {
 
     try {
       const result = await loginUser(formData);
-      setSuccess("Login Successful ✅");
+      setSuccess(result.message || "Login Successful");
       console.log("User Data:", result);
 
       // Example: Store JWT in localStorage
       if (result.token) {
         localStorage.setItem("token", result.token);
       }
+
+      // Redirect to dashboard or home page
+      window.location.href = "/";
     } catch (err) {
-      setError(err.message || "Login Failed ❌");
+      setError(err.message || "Login Failed");
     }
   };
 

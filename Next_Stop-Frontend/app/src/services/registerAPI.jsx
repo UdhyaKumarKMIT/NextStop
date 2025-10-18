@@ -1,7 +1,7 @@
 // src/services/registerAPI.jsx
 import axios from "axios";
 
-const API_URL = "http://localhost:5000/auth/register";
+const API_URL = "http://localhost:5050/api/auth/register";
 
 export const registerUser = async (userData) => {
   try {
@@ -12,6 +12,12 @@ export const registerUser = async (userData) => {
     });
     return response.data;
   } catch (error) {
-    throw error.response ? error.response.data : error.message;
+    if (error.response && error.response.data && error.response.data.message) {
+      throw new Error(error.response.data.message);
+    } else if (error.response && error.response.data) {
+      throw new Error(JSON.stringify(error.response.data));
+    } else {
+      throw new Error(error.message || "Registration failed");
+    }
   }
 };

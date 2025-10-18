@@ -3,8 +3,10 @@ import React, { useState } from "react";
 import InputField from "./InputField";
 import Button from "./Button";
 import { registerUser } from "../services/registerAPI";
+import { useNavigate } from "react-router-dom";
 
 const RegisterForm = () => {
+
   const [formData, setFormData] = useState({
     username: "",
     password: "",
@@ -18,6 +20,7 @@ const RegisterForm = () => {
     address: "",
   });
 
+  const navigate = useNavigate();
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -35,13 +38,18 @@ const RegisterForm = () => {
 
     try {
       const result = await registerUser(formData);
-      setSuccess("Registration Successful ✅");
+      setSuccess(result.message || "Registration Successful");
       console.log("Registered User:", result);
 
-      // Optional redirect
-      // window.location.href = "/login";
+      
+      window.location.href = "/login";
+     
+      
+      
+     
+
     } catch (err) {
-      setError(err.message || "Registration Failed ❌");
+      setError(err.message || "Registration Failed ");
     }
   };
 
@@ -53,6 +61,7 @@ const RegisterForm = () => {
         placeholder="Username"
         value={formData.username}
         onChange={handleChange}
+        required
       />
       <InputField
         type="password"
@@ -60,6 +69,7 @@ const RegisterForm = () => {
         placeholder="Password"
         value={formData.password}
         onChange={handleChange}
+        required
       />
         <InputField
         type="password"
@@ -67,6 +77,7 @@ const RegisterForm = () => {
         placeholder="confirmPassword"
         value={formData.confirmPassword}
         onChange={handleChange}
+        required
       />
       <InputField
         type="text"
@@ -74,6 +85,7 @@ const RegisterForm = () => {
         placeholder="First Name"
         value={formData.firstName}
         onChange={handleChange}
+        required
       />
       <InputField
         type="text"
@@ -81,6 +93,7 @@ const RegisterForm = () => {
         placeholder="Last Name"
         value={formData.lastName}
         onChange={handleChange}
+        required
       />
       <InputField
         type="text"
@@ -88,6 +101,7 @@ const RegisterForm = () => {
         placeholder="Mobile Number"
         value={formData.mobileNo}
         onChange={handleChange}
+        required
       />
       <InputField
         type="text"
@@ -95,6 +109,7 @@ const RegisterForm = () => {
         placeholder="Alternate Mobile Number"
         value={formData.altMobileNo}
         onChange={handleChange}
+        required
       />
       <InputField
         type="date"
@@ -102,6 +117,7 @@ const RegisterForm = () => {
         placeholder="Date of Birth"
         value={formData.dob}
         onChange={handleChange}
+        required
       />
       <InputField
         type="email"
@@ -109,6 +125,7 @@ const RegisterForm = () => {
         placeholder="Email"
         value={formData.email}
         onChange={handleChange}
+        required
       />
       <InputField
         type="text"
@@ -116,6 +133,7 @@ const RegisterForm = () => {
         placeholder="Address"
         value={formData.address}
         onChange={handleChange}
+        required
       />
 
       <Button type="submit">Register</Button>
