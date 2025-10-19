@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const User = require('../models/User');
 
-// Configure nodemailer
+// ✅ Configure nodemailer (use env variables)
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -33,11 +33,18 @@ const register = async (req, res) => {
   }
 
   try {
-    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+    // ✅ Check existing username or email
+    const existingUser = await User.findOne({ 
+      $or: [{ username }, { email }] 
+    });
+
     if (existingUser)
       return res.status(400).json({ message: "Username or email already exists" });
 
+    // ✅ Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // ✅ Create user
     const newUser = new User({
       username,
       email,
@@ -49,37 +56,43 @@ const register = async (req, res) => {
       dob,
       address
     });
-    await newUser.save();
 
+    await newUser.save();
     res.status(201).json({ message: "User registered successfully" });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Registration Error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
 // ----------------- LOGIN -----------------
 const login = async (req, res) => {
-  const { username, password } = req.body;
+  const { identifier, password } = req.body; // identifier can be username or email
 
   try {
-    const user = await User.findOne({ $or: [{ username }, { email: username }] });
+    // ✅ Find user by username or email
+    const user = await User.findOne({
+      $or: [{ username: identifier }, { email: identifier }]
+    });
+
     if (!user) return res.status(401).json({ message: "User not found" });
 
+    // ✅ Compare passwords
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: "Invalid password" });
-    const token = jwt.sign(
-      { id: user._id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" } // expires in 1 hour
-    );
-    console.log(token);
 
-    // 4️⃣ Send token back
-    res.json({ message: "Login successful", token });  
+    // ✅ Generate JWT
+    const token = jwt.sign(
+      { id: user._id, username: user.username, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    res.json({ message: "Login successful", token });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Login Error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
@@ -90,13 +103,15 @@ const forgotPassword = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    // ✅ Generate 6-digit code
     const code = crypto.randomInt(100000, 999999).toString();
     user.resetCode = code;
-    user.resetCodeExpiry = Date.now() + 10 * 60 * 1000;
+    user.resetCodeExpiry = Date.now() + 10 * 60 * 1000; // 10 min expiry
     await user.save();
 
+    // ✅ Send email
     await transporter.sendMail({
-      from: '"NextBus Support" <studycegmit@gmail.com>',
+      from: '"NextStop Support" <studycegmit@gmail.com>',
       to: email,
       subject: "Password Reset Code",
       text: `Your password reset code is ${code}. It will expire in 10 minutes.`
@@ -104,32 +119,36 @@ const forgotPassword = async (req, res) => {
 
     res.json({ message: "Reset code sent to email" });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Forgot Password Error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
 // ----------------- RESET PASSWORD -----------------
 const resetPassword = async (req, res) => {
   const { email, code, newPassword } = req.body;
+
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    // ✅ Validate code and expiry
     if (user.resetCode !== code || user.resetCodeExpiry < Date.now()) {
       return res.status(400).json({ message: "Invalid or expired reset code" });
     }
 
+    // ✅ Update password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     user.password = hashedPassword;
     user.resetCode = undefined;
     user.resetCodeExpiry = undefined;
+
     await user.save();
 
     res.json({ message: "Password reset successful" });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    console.error("Reset Password Error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 

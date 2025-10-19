@@ -3,7 +3,7 @@ const router = express.Router();
 const {
   addBus,
   getAllBuses,
-  getBusById,
+  getBusByNumber,
   updateBus,
   deleteBus,
   searchBuses,
@@ -15,7 +15,7 @@ const { adminCheck } = require("../models/middleware/adminMiddleware");
 // Public routes
 router.get("/", getAllBuses);
 router.get("/search", searchBuses); 
-router.get("/:id", getBusById);
+router.get("/:id", getBusByNumber);
 
 // Admin protected routes
 router.post("/add", authBooking, adminCheck, addBus);

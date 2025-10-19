@@ -1,92 +1,108 @@
-// controllers/bookingController.js
 const Booking = require("../models/Booking");
 const Bus = require("../models/Bus");
-const SeatAvailability = require("../models/SeatAvailability");
-const generateSeats = require("../Utils/generateSeats");
-// Book a ticket
+const Route = require("../models/Route");
+const Seat = require("../models/Seat");
+
+// ---------------- BOOK A TICKET ----------------
 const bookTicket = async (req, res) => {
   try {
-    const { busId, travelDate, selectedSeats } = req.body; // e.g., ["3A", "3B"]
-    const userId = req.user._id;
+    const { busNumber, routeId, seatNumbers, journeyDate, boardingPoint } = req.body;
+    const username = req.user.username; // user authenticated via JWT
 
-    const bus = await Bus.findById(busId);
+    // Validate input
+    if (!busNumber || !routeId || !seatNumbers || !journeyDate) {
+      return res.status(400).json({ message: "Missing required booking details" });
+    }
+
+    // Fetch bus and route details
+    const bus = await Bus.findOne({ busNumber });
     if (!bus) return res.status(404).json({ message: "Bus not found" });
 
-    // Find seat availability for that date or create one
-    let seatData = await SeatAvailability.findOne({ bus: busId, date: travelDate });
+    const route = await Route.findOne({ routeId });
+    if (!route) return res.status(404).json({ message: "Route not found" });
 
-    if (!seatData) {
-      seatData = await SeatAvailability.create({
-        bus: busId,
-        date: travelDate,
-        seats: generateSeats(),
-      });
-    }
+    // Find seat info for the bus & date
+    const seatData = await Seat.findOne({ busNumber, date: journeyDate });
+    if (!seatData) return res.status(404).json({ message: "Seat data not found for this date" });
 
     // Check seat availability
-    for (const seatNo of selectedSeats) {
-      const seat = seatData.seats.find((s) => s.seat_no === seatNo);
-      if (!seat || seat.is_booked) {
-        return res.status(400).json({ message: `Seat ${seatNo} is already booked` });
-      }
+    const unavailableSeats = seatNumbers.filter(s => !seatData.seats.includes(s));
+    if (unavailableSeats.length > 0) {
+      return res.status(400).json({ message: `Seats ${unavailableSeats.join(", ")} are not available` });
     }
 
-    // Book seats
-    seatData.seats = seatData.seats.map((s) =>
-      selectedSeats.includes(s.seat_no) ? { ...s, is_booked: true } : s
-    );
-    seatData.available_count -= selectedSeats.length;
+    // Update seat availability
+    seatData.seats = seatData.seats.filter(s => !seatNumbers.includes(s));
+    seatData.availableSeats -= seatNumbers.length;
     await seatData.save();
 
-    // Create booking
-    const totalFare = bus.fare_per_seat * selectedSeats.length;
+    // Calculate total fare
+    const totalFare = seatData.price * seatNumbers.length;
 
-    const booking = await Booking.create({
-      user: userId,
-      bus: busId,
-      route: bus.route_id,
-      travel_date: travelDate,
-      seats_booked: selectedSeats,
-      total_fare: totalFare,
-      booking_time: new Date(),
-      status: "confirmed",
+    // Create booking
+    const newBooking = new Booking({
+      userId: username,
+      busId: busNumber,
+      routeId,
+      totalSeats: seatNumbers.length,
+      seatNumbers: seatNumbers.join(","),
+      totalFare,
+      journeyDate,
+      boardingPoint,
+      bookingStatus: "Confirmed",
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
 
-    res.status(201).json({ message: "Booking successful", booking });
+    await newBooking.save();
+
+    res.status(201).json({
+      message: "Booking successful",
+      booking: newBooking
+    });
+
   } catch (err) {
+    console.error("Booking Error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-module.exports = { bookTicket };
-
-// Cancel booking
+// ---------------- CANCEL BOOKING ----------------
 const cancelBooking = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ message: "Booking not found" });
-    if (booking.user.toString() !== req.user._id.toString())
+
+    if (booking.userId !== req.user.username)
       return res.status(403).json({ message: "Not authorized to cancel this booking" });
 
-    const bus = await Bus.findById(booking.bus);
-    bus.availableSeats += booking.seatsBooked;
-    await bus.save();
+    const seatData = await Seat.findOne({ busNumber: booking.busId, date: booking.journeyDate });
+    if (seatData) {
+      // Restore seats
+      const cancelledSeats = booking.seatNumbers.split(",");
+      seatData.seats.push(...cancelledSeats);
+      seatData.availableSeats += cancelledSeats.length;
+      await seatData.save();
+    }
 
-    booking.status = "Cancelled";
+    booking.bookingStatus = "Cancelled";
+    booking.updatedAt = new Date();
     await booking.save();
 
-    res.json({ message: "Booking cancelled", booking });
+    res.json({ message: "Booking cancelled successfully", booking });
   } catch (err) {
+    console.error("Cancel Error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-// Get all bookings of a user
+// ---------------- GET USER BOOKINGS ----------------
 const getUserBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find({ user: req.user._id }).populate("bus");
+    const bookings = await Booking.find({ userId: req.user.username });
     res.json({ bookings });
   } catch (err) {
+    console.error("Get Bookings Error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
