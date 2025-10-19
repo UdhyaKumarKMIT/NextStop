@@ -55,7 +55,7 @@ async function seed() {
       return {
         bookingId: bookingDoc._id,
         paymentDateTime: p.paymentDateTime ? new Date(p.paymentDateTime) : new Date(),
-        paymentType: p.paymentType,
+        paymentType: p.paymentType, 
         transactionId: p.transactionId,
         amount: p.amount,
         paymentStatus: p.paymentStatus,
