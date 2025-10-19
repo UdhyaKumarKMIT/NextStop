@@ -200,3 +200,190 @@ http://localhost:5050/api/auth/reset-password
 ```
 
 ---
+
+
+# 🚌 Bus API Documentation
+
+## 🚍 Get All Buses
+
+**Method:** `GET`
+**API:**
+
+```bash
+http://localhost:5050/api/buses/
+```
+
+**Response:**
+
+```json
+{
+    "buses": [
+        {
+            "_id": "68f48c6b9cf5023393a42d6c",
+            "busNumber": "TN01AB1234",
+            "busName": "KPN Travels",
+            "type": "AC",
+            "routeId": "route1",
+            "operatorName1": "Ravi Kumar",
+            "operatorPhone1": "9898989898",
+            "operatorName2": "Sankar",
+            "operatorPhone2": "9876500000",
+            "__v": 0,
+            "createdAt": "2025-10-19T06:59:55.622Z",
+            "updatedAt": "2025-10-19T06:59:55.622Z",
+            "route": {
+                "_id": "68f48c6b9cf5023393a42d67",
+                "routeId": "route1",
+                "source": "Madurai",
+                "destination": "Chennai",
+                "distance": 460,
+                "duration": "7h 30m",
+                "__v": 0,
+                "createdAt": "2025-10-19T06:59:55.590Z",
+                "updatedAt": "2025-10-19T06:59:55.590Z"
+            }
+        },
+        {
+            "_id": "68f48c6b9cf5023393a42d6d",
+            "busNumber": "TN02CD5678",
+            "busName": "Parveen Travels",
+            "type": "AC",
+            "routeId": "route1",
+            "operatorName1": "Suresh Kumar",
+            "operatorPhone1": "9797979797",
+            "operatorName2": null,
+            "operatorPhone2": null,
+            "__v": 0,
+            "createdAt": "2025-10-19T06:59:55.622Z",
+            "updatedAt": "2025-10-19T06:59:55.622Z",
+            "route": {
+                "_id": "68f48c6b9cf5023393a42d67",
+                "routeId": "route1",
+                "source": "Madurai",
+                "destination": "Chennai",
+                "distance": 460,
+                "duration": "7h 30m",
+                "__v": 0,
+                "createdAt": "2025-10-19T06:59:55.590Z",
+                "updatedAt": "2025-10-19T06:59:55.590Z"
+            }
+        }
+    ]
+}
+```
+
+---
+
+## 🚌 Get Bus by Bus Number
+
+**Method:** `GET`
+**API:**
+
+```bash
+http://localhost:5050/api/buses/TN02CD5678
+```
+
+**Response:**
+
+```json
+{
+    "bus": {
+        "_id": "68f48c6b9cf5023393a42d6d",
+        "busNumber": "TN02CD5678",
+        "busName": "Parveen Travels",
+        "type": "AC",
+        "routeId": "route1",
+        "operatorName1": "Suresh Kumar",
+        "operatorPhone1": "9797979797",
+        "operatorName2": null,
+        "operatorPhone2": null,
+        "__v": 0,
+        "createdAt": "2025-10-19T06:59:55.622Z",
+        "updatedAt": "2025-10-19T06:59:55.622Z",
+        "route": {
+            "_id": "68f48c6b9cf5023393a42d67",
+            "routeId": "route1",
+            "source": "Madurai",
+            "destination": "Chennai",
+            "distance": 460,
+            "duration": "7h 30m",
+            "__v": 0,
+            "createdAt": "2025-10-19T06:59:55.590Z",
+            "updatedAt": "2025-10-19T06:59:55.590Z"
+        }
+    }
+}
+```
+
+---
+
+## 🔍 Search Buses by Route & Type
+
+**Method:** `GET`
+**API:**
+
+```bash
+http://localhost:5050/api/buses/search?source=Madurai&destination=Chennai&type=AC
+```
+
+**Response:**
+
+```json
+{
+    "buses": [
+        {
+            "_id": "68f48c6b9cf5023393a42d6c",
+            "busNumber": "TN01AB1234",
+            "busName": "KPN Travels",
+            "type": "AC",
+            "routeId": "route1",
+            "operatorName1": "Ravi Kumar",
+            "operatorPhone1": "9898989898",
+            "operatorName2": "Sankar",
+            "operatorPhone2": "9876500000",
+            "__v": 0,
+            "createdAt": "2025-10-19T06:59:55.622Z",
+            "updatedAt": "2025-10-19T06:59:55.622Z",
+            "route": {
+                "_id": "68f48c6b9cf5023393a42d67",
+                "routeId": "route1",
+                "source": "Madurai",
+                "destination": "Chennai",
+                "distance": 460,
+                "duration": "7h 30m",
+                "__v": 0,
+                "createdAt": "2025-10-19T06:59:55.590Z",
+                "updatedAt": "2025-10-19T06:59:55.590Z"
+            }
+        },
+        {
+            "_id": "68f48c6b9cf5023393a42d6d",
+            "busNumber": "TN02CD5678",
+            "busName": "Parveen Travels",
+            "type": "AC",
+            "routeId": "route1",
+            "operatorName1": "Suresh Kumar",
+            "operatorPhone1": "9797979797",
+            "operatorName2": null,
+            "operatorPhone2": null,
+            "__v": 0,
+            "createdAt": "2025-10-19T06:59:55.622Z",
+            "updatedAt": "2025-10-19T06:59:55.622Z",
+            "route": {
+                "_id": "68f48c6b9cf5023393a42d67",
+                "routeId": "route1",
+                "source": "Madurai",
+                "destination": "Chennai",
+                "distance": 460,
+                "duration": "7h 30m",
+                "__v": 0,
+                "createdAt": "2025-10-19T06:59:55.590Z",
+                "updatedAt": "2025-10-19T06:59:55.590Z"
+            }
+        }
+    ]
+}
+```
+
+---
+

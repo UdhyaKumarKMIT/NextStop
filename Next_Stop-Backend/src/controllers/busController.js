@@ -52,11 +52,16 @@ const getAllBuses = async (req, res) => {
 // ✅ Get bus by busNumber (Primary Key)
 const getBusByNumber = async (req, res) => {
   try {
-    const { id: busNumber } = req.params; // match route param
-    const bus = await Bus.findOne({ busNumber });
+    const { id: busNumber } = req.params;
+    const trimmedBusNumber = busNumber.trim();
+
+    console.log("Fetching Bus with number:", trimmedBusNumber);
+
+    const bus = await Bus.findOne({ busNumber: { $regex: `^${trimmedBusNumber}$`, $options: "i" } });
+    console.log("Fetched Bus:", bus);
+
     if (!bus) return res.status(404).json({ message: "Bus not found" });
 
-    // fetch route manually
     const route = await Route.findOne({ routeId: bus.routeId });
     const busWithRoute = { ...bus.toObject(), route };
 
@@ -65,7 +70,6 @@ const getBusByNumber = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
-
 
 
 // ✅ Update bus info (Admin)
@@ -94,7 +98,12 @@ const deleteBus = async (req, res) => {
 // ✅ Search buses by origin, destination, or busType
 const searchBuses = async (req, res) => {
   try {
-    const { source, destination, type } = req.query;
+    let { source, destination, type } = req.query;
+
+    // Trim any extra spaces or newlines
+    source = source?.trim();
+    destination = destination?.trim();
+    type = type?.trim();
 
     console.log("=== Search Buses Debug ===");
     console.log("Received query params:", { source, destination, type });
@@ -145,6 +154,8 @@ const searchBuses = async (req, res) => {
     });
   }
 };
+
+
 module.exports = {
   addBus,
   getAllBuses,
