@@ -1,63 +1,24 @@
 [
     {
-      "startPoint": "Chennai",
-      "endPoint": "Bangalore",
-      "distance": 350,
-      "duration": "6h 30m"
-    },
-    {
-      "startPoint": "Chennai",
-      "endPoint": "Hyderabad",
-      "distance": 625,
-      "duration": "10h 30m"
-    },
-    {
-      "startPoint": "Chennai",
-      "endPoint": "Coimbatore",
-      "distance": 500,
-      "duration": "8h 0m"
-    },
-    {
-      "startPoint": "Chennai",
-      "endPoint": "Madurai",
+      "routeId": "route1",
+      "source": "Madurai",
+      "destination": "Chennai",
       "distance": 460,
-      "duration": "7h 45m"
+      "duration": "7h 30m"
     },
     {
-      "startPoint": "Bangalore",
-      "endPoint": "Hyderabad",
-      "distance": 570,
-      "duration": "9h 45m"
+      "routeId": "route2",
+      "source": "Coimbatore",
+      "destination": "Bangalore",
+      "distance": 370,
+      "duration": "6h 15m"
     },
     {
-      "startPoint": "Bangalore",
-      "endPoint": "Coimbatore",
-      "distance": 400,
-      "duration": "7h 0m"
-    },
-    {
-      "startPoint": "Bangalore",
-      "endPoint": "Madurai",
-      "distance": 435,
-      "duration": "7h 15m"
-    },
-    {
-      "startPoint": "Hyderabad",
-      "endPoint": "Coimbatore",
-      "distance": 750,
-      "duration": "12h 0m"
-    },
-    {
-      "startPoint": "Hyderabad",
-      "endPoint": "Madurai",
-      "distance": 780,
-      "duration": "12h 30m"
-    },
-    {
-      "startPoint": "Coimbatore",
-      "endPoint": "Madurai",
-      "distance": 200,
-      "duration": "4h 0m"
+      "routeId": "route3",
+      "source": "Trichy",
+      "destination": "Madurai",
+      "distance": 135,
+      "duration": "2h 15m"
     }
   ]
   

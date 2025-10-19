@@ -1,35 +1,64 @@
 // controllers/bookingController.js
 const Booking = require("../models/Booking");
 const Bus = require("../models/Bus");
-
+const SeatAvailability = require("../models/SeatAvailability");
+const generateSeats = require("../Utils/generateSeats");
 // Book a ticket
 const bookTicket = async (req, res) => {
   try {
-    const { busId, seats } = req.body;
+    const { busId, travelDate, selectedSeats } = req.body; // e.g., ["3A", "3B"]
+    const userId = req.user._id;
+
     const bus = await Bus.findById(busId);
     if (!bus) return res.status(404).json({ message: "Bus not found" });
-    if (bus.availableSeats < seats)
-      return res.status(400).json({ message: "Not enough seats available" });
 
-    const totalFare = bus.fare * seats;
+    // Find seat availability for that date or create one
+    let seatData = await SeatAvailability.findOne({ bus: busId, date: travelDate });
+
+    if (!seatData) {
+      seatData = await SeatAvailability.create({
+        bus: busId,
+        date: travelDate,
+        seats: generateSeats(),
+      });
+    }
+
+    // Check seat availability
+    for (const seatNo of selectedSeats) {
+      const seat = seatData.seats.find((s) => s.seat_no === seatNo);
+      if (!seat || seat.is_booked) {
+        return res.status(400).json({ message: `Seat ${seatNo} is already booked` });
+      }
+    }
+
+    // Book seats
+    seatData.seats = seatData.seats.map((s) =>
+      selectedSeats.includes(s.seat_no) ? { ...s, is_booked: true } : s
+    );
+    seatData.available_count -= selectedSeats.length;
+    await seatData.save();
 
     // Create booking
-    const booking = await Booking.create({
-      user: req.user._id,
-      bus: bus._id,
-      seatsBooked: seats,
-      totalFare,
-    });
+    const totalFare = bus.fare_per_seat * selectedSeats.length;
 
-    // Update bus available seats
-    bus.availableSeats -= seats;
-    await bus.save();
+    const booking = await Booking.create({
+      user: userId,
+      bus: busId,
+      route: bus.route_id,
+      travel_date: travelDate,
+      seats_booked: selectedSeats,
+      total_fare: totalFare,
+      booking_time: new Date(),
+      status: "confirmed",
+    });
 
     res.status(201).json({ message: "Booking successful", booking });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
+module.exports = { bookTicket };
 
 // Cancel booking
 const cancelBooking = async (req, res) => {
