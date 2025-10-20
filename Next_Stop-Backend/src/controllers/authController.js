@@ -68,28 +68,27 @@ const register = async (req, res) => {
 
 // ----------------- LOGIN -----------------
 const login = async (req, res) => {
-  const { identifier, password } = req.body; // identifier can be username or email
+  const { username, password } = req.body;
 
   try {
-    // ✅ Find user by username or email
-    const user = await User.findOne({
-      $or: [{ username: identifier }, { email: identifier }]
+    // ✅ Allow login with either username or email
+    const user = await User.findOne({ 
+      $or: [{ username:username }, { email: username }] 
     });
 
     if (!user) return res.status(401).json({ message: "User not found" });
 
-    // ✅ Compare passwords
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: "Invalid password" });
 
     // ✅ Generate JWT
     const token = jwt.sign(
-      { id: user._id, username: user.username, email: user.email, role: user.role },
+      { username: user.username, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
 
-    res.json({ message: "Login successful", token });
+    res.json({ message: "Login successful", token ,role : user.role});
   } catch (err) {
     console.error("Login Error:", err);
     res.status(500).json({ message: "Server error", error: err.message });

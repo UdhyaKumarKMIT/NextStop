@@ -73,21 +73,35 @@ const getBusByNumber = async (req, res) => {
 
 
 // ✅ Update bus info (Admin)
+// ✅ Update bus info (Admin)
 const updateBus = async (req, res) => {
   try {
-    const { busNumber } = req.params;
-    const bus = await Bus.findOneAndUpdate({ busNumber }, req.body, { new: true });
+    const { busNumber } = req.params; // <-- from the route /:busNumber
+    const trimmedBusNumber = busNumber.trim(); // <-- define it!
+
+    console.log("Updating Bus:", trimmedBusNumber);
+
+    const bus = await Bus.findOneAndUpdate(
+      { busNumber: { $regex: `^${trimmedBusNumber}$`, $options: "i" } },
+      req.body,
+      { new: true }
+    );
+
     if (!bus) return res.status(404).json({ message: "Bus not found" });
+
     res.status(200).json({ message: "Bus updated successfully", bus });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
+
+
 // ✅ Delete bus (Admin)
 const deleteBus = async (req, res) => {
   try {
     const { busNumber } = req.params;
+    
     const bus = await Bus.findOneAndDelete({ busNumber });
     if (!bus) return res.status(404).json({ message: "Bus not found" });
     res.status(200).json({ message: "Bus deleted successfully" });

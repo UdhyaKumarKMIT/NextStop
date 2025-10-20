@@ -12,14 +12,14 @@ const {
 const { authBooking } = require("../models/middleware/authMiddleware");
 const { adminCheck } = require("../models/middleware/adminMiddleware");
 
-// Public routes
+// Public 
 router.get("/", getAllBuses);
 router.get("/search", searchBuses); 
-router.get("/:id", getBusByNumber);
+router.get("/:busNumber", getBusByNumber);
 
-// Admin protected routes
+// Admin protected 
 router.post("/add", authBooking, adminCheck, addBus);
-router.put("/:id", authBooking, adminCheck, updateBus);
-router.delete("/:id", authBooking, adminCheck, deleteBus);
+router.put("/:busNumber", authBooking, adminCheck, updateBus);
+router.delete("/:busNumber", authBooking, adminCheck, deleteBus);
 
 module.exports = router;

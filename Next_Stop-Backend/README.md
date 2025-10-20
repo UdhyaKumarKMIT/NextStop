@@ -201,6 +201,9 @@ http://localhost:5050/api/auth/reset-password
 
 ---
 
+Perfect ✅ Here’s your **GitHub-ready Bus API Documentation** — formatted exactly like your previous ones, including both public and admin-protected routes (with JWT header info).
+
+---
 
 # 🚌 Bus API Documentation
 
@@ -228,45 +231,45 @@ http://localhost:5050/api/buses/
             "operatorPhone1": "9898989898",
             "operatorName2": "Sankar",
             "operatorPhone2": "9876500000",
-            "__v": 0,
             "createdAt": "2025-10-19T06:59:55.622Z",
             "updatedAt": "2025-10-19T06:59:55.622Z",
             "route": {
-                "_id": "68f48c6b9cf5023393a42d67",
                 "routeId": "route1",
                 "source": "Madurai",
                 "destination": "Chennai",
                 "distance": 460,
-                "duration": "7h 30m",
-                "__v": 0,
-                "createdAt": "2025-10-19T06:59:55.590Z",
-                "updatedAt": "2025-10-19T06:59:55.590Z"
+                "duration": "7h 30m"
             }
-        },
+        }
+    ]
+}
+```
+
+---
+
+## 🔍 Search Buses by Route & Type
+
+**Method:** `GET`
+**API:**
+
+```bash
+http://localhost:5050/api/buses/search?source=Madurai&destination=Chennai&type=AC
+```
+
+**Response:**
+
+```json
+{
+    "buses": [
         {
-            "_id": "68f48c6b9cf5023393a42d6d",
-            "busNumber": "TN02CD5678",
-            "busName": "Parveen Travels",
+            "busNumber": "TN01AB1234",
+            "busName": "KPN Travels",
             "type": "AC",
             "routeId": "route1",
-            "operatorName1": "Suresh Kumar",
-            "operatorPhone1": "9797979797",
-            "operatorName2": null,
-            "operatorPhone2": null,
-            "__v": 0,
-            "createdAt": "2025-10-19T06:59:55.622Z",
-            "updatedAt": "2025-10-19T06:59:55.622Z",
-            "route": {
-                "_id": "68f48c6b9cf5023393a42d67",
-                "routeId": "route1",
-                "source": "Madurai",
-                "destination": "Chennai",
-                "distance": 460,
-                "duration": "7h 30m",
-                "__v": 0,
-                "createdAt": "2025-10-19T06:59:55.590Z",
-                "updatedAt": "2025-10-19T06:59:55.590Z"
-            }
+            "operatorName1": "Ravi Kumar",
+            "operatorPhone1": "9898989898",
+            "operatorName2": "Sankar",
+            "operatorPhone2": "9876500000"
         }
     ]
 }
@@ -297,93 +300,132 @@ http://localhost:5050/api/buses/TN02CD5678
         "operatorPhone1": "9797979797",
         "operatorName2": null,
         "operatorPhone2": null,
-        "__v": 0,
         "createdAt": "2025-10-19T06:59:55.622Z",
-        "updatedAt": "2025-10-19T06:59:55.622Z",
-        "route": {
-            "_id": "68f48c6b9cf5023393a42d67",
-            "routeId": "route1",
-            "source": "Madurai",
-            "destination": "Chennai",
-            "distance": 460,
-            "duration": "7h 30m",
-            "__v": 0,
-            "createdAt": "2025-10-19T06:59:55.590Z",
-            "updatedAt": "2025-10-19T06:59:55.590Z"
-        }
+        "updatedAt": "2025-10-19T06:59:55.622Z"
     }
 }
 ```
 
 ---
 
-## 🔍 Search Buses by Route & Type
+# 🔒 Admin Protected Routes
 
-**Method:** `GET`
+> **Header Key:** `Authorization`
+> **Header Value:** `Bearer <token>`
+
+---
+
+## ➕ Add Bus
+
+**Method:** `POST`
 **API:**
 
 ```bash
-http://localhost:5050/api/buses/search?source=Madurai&destination=Chennai&type=AC
+http://localhost:5050/api/buses/add
+```
+
+**JSON:**
+
+```json
+{
+  "busNumber": "TN05GH3456",
+  "busName": "Galaxy Travels",
+  "type": "AC",
+  "routeId": "route1",
+  "operatorName1": "Arun Prakash",
+  "operatorPhone1": "9881122334",
+  "operatorName2": "Vikram Singh",
+  "operatorPhone2": "9900112233"
+}
 ```
 
 **Response:**
 
 ```json
 {
-    "buses": [
-        {
-            "_id": "68f48c6b9cf5023393a42d6c",
-            "busNumber": "TN01AB1234",
-            "busName": "KPN Travels",
-            "type": "AC",
-            "routeId": "route1",
-            "operatorName1": "Ravi Kumar",
-            "operatorPhone1": "9898989898",
-            "operatorName2": "Sankar",
-            "operatorPhone2": "9876500000",
-            "__v": 0,
-            "createdAt": "2025-10-19T06:59:55.622Z",
-            "updatedAt": "2025-10-19T06:59:55.622Z",
-            "route": {
-                "_id": "68f48c6b9cf5023393a42d67",
-                "routeId": "route1",
-                "source": "Madurai",
-                "destination": "Chennai",
-                "distance": 460,
-                "duration": "7h 30m",
-                "__v": 0,
-                "createdAt": "2025-10-19T06:59:55.590Z",
-                "updatedAt": "2025-10-19T06:59:55.590Z"
-            }
-        },
-        {
-            "_id": "68f48c6b9cf5023393a42d6d",
-            "busNumber": "TN02CD5678",
-            "busName": "Parveen Travels",
-            "type": "AC",
-            "routeId": "route1",
-            "operatorName1": "Suresh Kumar",
-            "operatorPhone1": "9797979797",
-            "operatorName2": null,
-            "operatorPhone2": null,
-            "__v": 0,
-            "createdAt": "2025-10-19T06:59:55.622Z",
-            "updatedAt": "2025-10-19T06:59:55.622Z",
-            "route": {
-                "_id": "68f48c6b9cf5023393a42d67",
-                "routeId": "route1",
-                "source": "Madurai",
-                "destination": "Chennai",
-                "distance": 460,
-                "duration": "7h 30m",
-                "__v": 0,
-                "createdAt": "2025-10-19T06:59:55.590Z",
-                "updatedAt": "2025-10-19T06:59:55.590Z"
-            }
-        }
-    ]
+  "message": "Bus added successfully",
+  "bus": {
+    "_id": "68f5a9171eb8efa4a07eb23d",
+    "busNumber": "TN05GH3456",
+    "busName": "Galaxy Travels",
+    "type": "AC",
+    "routeId": "route1",
+    "operatorName1": "Arun Prakash",
+    "operatorPhone1": "9881122334",
+    "operatorName2": "Vikram Singh",
+    "operatorPhone2": "9900112233",
+    "createdAt": "2025-10-20T03:14:31.681Z",
+    "updatedAt": "2025-10-20T03:14:31.681Z"
+  }
 }
 ```
 
 ---
 
+## ✏️ Update Bus
+
+**Method:** `PUT`
+**API:**
+
+```bash
+http://localhost:5050/api/buses/TN05GH3456
+```
+
+**JSON:**
+
+```json
+{
+  "busNumber": "TN05GH3456",
+  "busName": "Galaxy Travels 1",
+  "type": "AC",
+  "routeId": "route1",
+  "operatorName1": "Arun Prakash",
+  "operatorPhone1": "9881122334",
+  "operatorName2": "Vikram Singh",
+  "operatorPhone2": "9900112233"
+}
+```
+
+**Response:**
+
+```json
+{
+  "message": "Bus updated successfully",
+  "bus": {
+    "_id": "68f5a9171eb8efa4a07eb23d",
+    "busNumber": "TN05GH3456",
+    "busName": "Galaxy Travels 1",
+    "type": "AC",
+    "routeId": "route1",
+    "operatorName1": "Arun Prakash",
+    "operatorPhone1": "9881122334",
+    "operatorName2": "Vikram Singh",
+    "operatorPhone2": "9900112233",
+    "createdAt": "2025-10-20T03:14:31.681Z",
+    "updatedAt": "2025-10-20T03:25:59.009Z"
+  }
+}
+```
+
+---
+
+## 🗑️ Delete Bus
+
+**Method:** `DELETE`
+**API:**
+
+```bash
+http://localhost:5050/api/buses/TN05GH3456
+```
+
+**Response:**
+
+```json
+{
+  "message": "Bus deleted successfully"
+}
+```
+
+---
+
+Would you like me to include the **Route APIs** next (like `GET /routes`, `POST /routes/add`, etc.) in the same style for your complete GitHub documentation?
