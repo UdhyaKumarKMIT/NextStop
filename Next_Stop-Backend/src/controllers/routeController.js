@@ -1,7 +1,7 @@
 // controllers/routeController.js
 const Route = require("../models/Route");
 
-// Add a new route (Admin only)
+// ✅ Add a new route (Admin only)
 const addRoute = async (req, res) => {
   try {
     const route = await Route.create(req.body);
@@ -11,7 +11,7 @@ const addRoute = async (req, res) => {
   }
 };
 
-// Get all routes
+// ✅ Get all routes
 const getAllRoutes = async (req, res) => {
   try {
     const routes = await Route.find();
@@ -21,38 +21,68 @@ const getAllRoutes = async (req, res) => {
   }
 };
 
-// Get route by ID
+// ✅ Get route by routeId
 const getRouteById = async (req, res) => {
   try {
-    trimmedRouteId = req.params.routeId.trim();
-    const route = await Route.findOne({routeId : trimmedRouteId});
+    const trimmedRouteId = req.params.routeId.trim();
+    console.log("Fetching route:", trimmedRouteId);
+    const route = await Route.findOne(
+      { routeId: { $regex: `^${trimmedRouteId}$`, $options: "i" } }, // ✅ case-insensitive match
+    
+    );
     if (!route) return res.status(404).json({ message: "Route not found" });
+
     res.json({ route });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-// Update route info (Admin only)
+// ✅ Update route info (Admin only)
 const updateRoute = async (req, res) => {
   try {
-    const route = await Route.findOneAndUpdate({routeId :req.params.id}, req.body, { new: true });
+    const trimmedRouteId = req.params.routeId.trim();
+    console.log("Updating route:", trimmedRouteId);
+
+    // Prevent changing routeId
+    const { routeId, ...updateData } = req.body;
+
+    const route = await Route.findOneAndUpdate(
+      { routeId: { $regex: `^${trimmedRouteId}$`, $options: "i" } }, // ✅ case-insensitive match
+      updateData,
+      { new: true }
+    );
+
     if (!route) return res.status(404).json({ message: "Route not found" });
+
     res.json({ message: "Route updated successfully", route });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-// Delete route (Admin only)
+// ✅ Delete route (Admin only)
 const deleteRoute = async (req, res) => {
   try {
-    const route = await Route.findOneAndDelete({routeId : req.params.id});
+    const trimmedRouteId = req.params.routeId.trim();
+    console.log("Deleting route:", trimmedRouteId);
+
+    const route = await Route.findOneAndDelete(
+      { routeId: { $regex: `^${trimmedRouteId}$`, $options: "i" } }, // ✅ case-insensitive match
+    );
+    
     if (!route) return res.status(404).json({ message: "Route not found" });
+
     res.json({ message: "Route deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-module.exports = { addRoute, getAllRoutes, getRouteById, updateRoute, deleteRoute };
+module.exports = {
+  addRoute,
+  getAllRoutes,
+  getRouteById,
+  updateRoute,
+  deleteRoute
+};

@@ -16,8 +16,8 @@ const { adminCheck } = require("../models/middleware/adminMiddleware"); // Admin
 router.get("/", getAllRoutes);
 router.get("/:routeId", getRouteById);
 
-// Admin protected routes
-router.post("/add", authBooking, adminCheck, addRoute);
+// Admin routes
+router.post("/", authBooking, adminCheck, addRoute);
 router.put("/:routeId", authBooking, adminCheck, updateRoute);
 router.delete("/:routeId", authBooking, adminCheck, deleteRoute);
 
