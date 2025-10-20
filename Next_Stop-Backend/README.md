@@ -427,5 +427,3 @@ http://localhost:5050/api/buses/TN05GH3456
 ```
 
 ---
-
-Would you like me to include the **Route APIs** next (like `GET /routes`, `POST /routes/add`, etc.) in the same style for your complete GitHub documentation?
