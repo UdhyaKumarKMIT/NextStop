@@ -5,8 +5,14 @@ const seatSchema = new mongoose.Schema({
   totalSeats: { type: Number, required: true },
   date: { type: Date, required: true },
   availableSeats: { type: Number, required: true },
-  seats: { type: String, required: true }, // e.g. "1-1,1-2,1-3"
+  seats: {
+    type: [String], // ✅ Array of seat identifiers like ["1-1", "1-2", "2-3"]
+    default: [],
+  },
   price: { type: Number, required: true }
 }, { timestamps: true });
 
 module.exports = mongoose.model("Seat", seatSchema);
+
+
+const mongoose = require("mongoose");
