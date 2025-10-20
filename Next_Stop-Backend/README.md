@@ -427,3 +427,172 @@ http://localhost:5050/api/buses/TN05GH3456
 ```
 
 ---
+
+
+# 🗺️ Routes API Documentation
+
+## 🚏 Get All Routes
+
+**Method:** `GET`
+**API:**
+
+```bash
+http://localhost:5050/api/routes
+```
+
+**Response:**
+
+```json
+{
+    "routes": [
+        {
+            "_id": "68f48c6b9cf5023393a42d67",
+            "routeId": "route1",
+            "source": "Madurai",
+            "destination": "Chennai",
+            "distance": 460,
+            "duration": "7h 30m",
+            "createdAt": "2025-10-19T06:59:55.590Z",
+            "updatedAt": "2025-10-19T06:59:55.590Z"
+        },
+        {
+            "_id": "68f48c6b9cf5023393a42d69",
+            "routeId": "route3",
+            "source": "Trichy",
+            "destination": "Madurai",
+            "distance": 135,
+            "duration": "2h 15m",
+            "createdAt": "2025-10-19T06:59:55.590Z",
+            "updatedAt": "2025-10-19T06:59:55.590Z"
+        }
+    ]
+}
+```
+
+---
+
+## 🛤️ Get Route by Route ID
+
+**Method:** `GET`
+**API:**
+
+```bash
+http://localhost:5050/api/routes/route3
+```
+
+**Response:**
+
+```json
+{
+    "route": {
+        "_id": "68f48c6b9cf5023393a42d69",
+        "routeId": "route3",
+        "source": "Trichy",
+        "destination": "Madurai",
+        "distance": 135,
+        "duration": "2h 15m",
+        "createdAt": "2025-10-19T06:59:55.590Z",
+        "updatedAt": "2025-10-19T06:59:55.590Z"
+    }
+}
+```
+
+---
+
+# 🔒 Admin Protected Routes
+
+> **Header Key:** `Authorization`
+> **Header Value:** `Bearer <token>`
+
+---
+
+## ➕ Add Route
+
+**Method:** `POST`
+**API:**
+
+```bash
+http://localhost:5050/api/routes/add
+```
+
+**JSON:**
+
+```json
+{
+  "routeId": "route4",
+  "source": "Trichy",
+  "destination": "Tenkasi",
+  "distance": 370,
+  "duration": "4h 15m"
+}
+```
+
+**Response:**
+
+```json
+{
+  "routeId": "route4",
+  "source": "Trichy",
+  "destination": "Tenkasi",
+  "distance": 370,
+  "duration": "4h 15m"
+}
+```
+
+---
+
+## ✏️ Update Route
+
+**Method:** `PUT`
+**API:**
+
+```bash
+http://localhost:5050/api/routes/route3
+```
+
+**JSON:**
+
+```json
+{
+  "source": "Madurai",
+  "destination": "Tenkasi",
+  "distance": 410,
+  "duration": "5h 10m"
+}
+```
+
+**Response:**
+
+```json
+{
+  "message": "Route updated successfully",
+  "route": {
+    "routeId": "route3",
+    "source": "Madurai",
+    "destination": "Tenkasi",
+    "distance": 410,
+    "duration": "5h 10m"
+  }
+}
+```
+
+---
+
+## 🗑️ Delete Route
+
+**Method:** `DELETE`
+**API:**
+
+```bash
+http://localhost:5050/api/routes/route3
+```
+
+**Response:**
+
+```json
+{
+  "message": "Route deleted successfully"
+}
+```
+
+---
