@@ -52,12 +52,12 @@ const getAllBuses = async (req, res) => {
 // ✅ Get bus by busNumber (Primary Key)
 const getBusByNumber = async (req, res) => {
   try {
-    const { id: busNumber } = req.params;
+    const busNumber  = req.params.busNumber;
     const trimmedBusNumber = busNumber.trim();
 
     console.log("Fetching Bus with number:", trimmedBusNumber);
 
-    const bus = await Bus.findOne({ busNumber: { $regex: `^${trimmedBusNumber}$`, $options: "i" } });
+    const bus = await Bus.findOne({ busNumber: { $regex: `^${busNumber}$`, $options: "i" } });
     console.log("Fetched Bus:", bus);
 
     if (!bus) return res.status(404).json({ message: "Bus not found" });
@@ -73,34 +73,36 @@ const getBusByNumber = async (req, res) => {
 
 
 // ✅ Update bus info (Admin)
-// ✅ Update bus info (Admin)
 const updateBus = async (req, res) => {
-  try {
-    const { busNumber } = req.params; // <-- from the route /:busNumber
-    const trimmedBusNumber = busNumber.trim(); // <-- define it!
-
-    console.log("Updating Bus:", trimmedBusNumber);
-
-    const bus = await Bus.findOneAndUpdate(
-      { busNumber: { $regex: `^${trimmedBusNumber}$`, $options: "i" } },
-      req.body,
-      { new: true }
-    );
-
-    if (!bus) return res.status(404).json({ message: "Bus not found" });
-
-    res.status(200).json({ message: "Bus updated successfully", bus });
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-};
+    try {
+      const { busNumber } = req.params;
+      const trimmedBusNumber = busNumber.trim();
+  
+      console.log("Updating Bus:", trimmedBusNumber);
+      console.log("Request body:", req.body);
+  
+      const bus = await Bus.findOneAndUpdate(
+        { busNumber: { $regex: `^${trimmedBusNumber}$`, $options: "i" } },
+        { $set: req.body },
+        { new: true, runValidators: true }
+      );
+  
+      if (!bus) return res.status(404).json({ message: "Bus not found" });
+  
+      res.status(200).json({ message: "Bus updated successfully", bus });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ message: "Server error", error: err.message });
+    }
+  };
+  
 
 
 
 // ✅ Delete bus (Admin)
 const deleteBus = async (req, res) => {
   try {
-    const { busNumber } = req.params;
+    const busNumber  = req.params.busNumber;
     
     const bus = await Bus.findOneAndDelete({ busNumber });
     if (!bus) return res.status(404).json({ message: "Bus not found" });
