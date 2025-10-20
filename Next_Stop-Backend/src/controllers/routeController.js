@@ -24,7 +24,8 @@ const getAllRoutes = async (req, res) => {
 // Get route by ID
 const getRouteById = async (req, res) => {
   try {
-    const route = await Route.findById(req.params.id);
+    trimmedRouteId = req.params.routeId.trim();
+    const route = await Route.findOne({routeId : trimmedRouteId});
     if (!route) return res.status(404).json({ message: "Route not found" });
     res.json({ route });
   } catch (err) {
@@ -35,7 +36,7 @@ const getRouteById = async (req, res) => {
 // Update route info (Admin only)
 const updateRoute = async (req, res) => {
   try {
-    const route = await Route.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const route = await Route.findOneAndUpdate({routeId :req.params.id}, req.body, { new: true });
     if (!route) return res.status(404).json({ message: "Route not found" });
     res.json({ message: "Route updated successfully", route });
   } catch (err) {
@@ -46,7 +47,7 @@ const updateRoute = async (req, res) => {
 // Delete route (Admin only)
 const deleteRoute = async (req, res) => {
   try {
-    const route = await Route.findByIdAndDelete(req.params.id);
+    const route = await Route.findOneAndDelete({routeId : req.params.id});
     if (!route) return res.status(404).json({ message: "Route not found" });
     res.json({ message: "Route deleted successfully" });
   } catch (err) {

@@ -14,11 +14,11 @@ const { adminCheck } = require("../models/middleware/adminMiddleware"); // Admin
 
 // Public routes
 router.get("/", getAllRoutes);
-router.get("/:id", getRouteById);
+router.get("/:routeId", getRouteById);
 
 // Admin protected routes
 router.post("/add", authBooking, adminCheck, addRoute);
-router.put("/:id", authBooking, adminCheck, updateRoute);
-router.delete("/:id", authBooking, adminCheck, deleteRoute);
+router.put("/:routeId", authBooking, adminCheck, updateRoute);
+router.delete("/:routeId", authBooking, adminCheck, deleteRoute);
 
 module.exports = router;
