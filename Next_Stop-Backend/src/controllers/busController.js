@@ -7,21 +7,29 @@ const addBus = async (req, res) => {
     const { busNumber, routeId } = req.body;
 
     // Check if bus already exists
-    const existingBus = await Bus.findOne({ busNumber });
+    const existingBus = await Bus.findOne({
+      busNumber: { $regex: `^${busNumber.trim()}$`, $options: "i" },
+    });
     if (existingBus) {
-      return res.status(400).json({ message: "Bus with this number already exists" });
+      return res
+        .status(400)
+        .json({ message: "Bus with this number already exists" });
     }
 
     // Validate routeId
-    const route = await Route.findOne({ routeId });
+    const route = await Route.findOne({
+      routeId: { $regex: `^${routeId.trim()}$`, $options: "i" },
+    });
     if (!route) {
-      return res.status(404).json({ message: "Invalid routeId. Please create the route first." });
+      return res
+        .status(404)
+        .json({ message: "Invalid routeId. Please create the route first." });
     }
 
     // Create bus
     const bus = await Bus.create({
       ...req.body,
-      routeId: route.routeId, // ensure routeId is linked correctly
+      routeId: route.routeId, // ensure routeId is valid and linked
     });
 
     res.status(201).json({ message: "Bus added successfully", bus });
@@ -30,11 +38,11 @@ const addBus = async (req, res) => {
   }
 };
 
+// ✅ Get all buses (with route info)
 const getAllBuses = async (req, res) => {
   try {
-    const buses = await Bus.find(); // no populate
+    const buses = await Bus.find();
 
-    // Optionally attach route details manually
     const busesWithRoute = await Promise.all(
       buses.map(async (bus) => {
         const route = await Route.findOne({ routeId: bus.routeId });
@@ -48,17 +56,16 @@ const getAllBuses = async (req, res) => {
   }
 };
 
-
-// ✅ Get bus by busNumber (Primary Key)
+// ✅ Get bus by busNumber
 const getBusByNumber = async (req, res) => {
   try {
-    const busNumber  = req.params.busNumber;
-    const trimmedBusNumber = busNumber.trim();
+    const trimmedBusNumber = req.params.busNumber.trim();
 
-    console.log("Fetching Bus with number:", trimmedBusNumber);
+    console.log("Fetching bus:", trimmedBusNumber);
 
-    const bus = await Bus.findOne({ busNumber: { $regex: `^${busNumber}$`, $options: "i" } });
-    console.log("Fetched Bus:", bus);
+    const bus = await Bus.findOne({
+      busNumber: { $regex: `^${trimmedBusNumber}$`, $options: "i" },
+    });
 
     if (!bus) return res.status(404).json({ message: "Bus not found" });
 
@@ -71,106 +78,102 @@ const getBusByNumber = async (req, res) => {
   }
 };
 
-
-// ✅ Update bus info (Admin)
+// ✅ Update bus info (Admin only)
 const updateBus = async (req, res) => {
-    try {
-      const { busNumber } = req.params;
-      const trimmedBusNumber = busNumber.trim();
-  
-      console.log("Updating Bus:", trimmedBusNumber);
-      console.log("Request body:", req.body);
-  
-      const bus = await Bus.findOneAndUpdate(
-        { busNumber: { $regex: `^${trimmedBusNumber}$`, $options: "i" } },
-        { $set: req.body },
-        { new: true, runValidators: true }
-      );
-  
-      if (!bus) return res.status(404).json({ message: "Bus not found" });
-  
-      res.status(200).json({ message: "Bus updated successfully", bus });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Server error", error: err.message });
+  try {
+    const trimmedBusNumber = req.params.busNumber.trim();
+    console.log("Updating Bus:", trimmedBusNumber);
+    console.log("Request Body:", req.body);
+
+    // Prevent busNumber change
+    const { busNumber, ...updateData } = req.body;
+
+    // If routeId is being updated, validate it
+    if (updateData.routeId) {
+      const validRoute = await Route.findOne({
+        routeId: { $regex: `^${updateData.routeId.trim()}$`, $options: "i" },
+      });
+      if (!validRoute) {
+        return res.status(404).json({ message: "Invalid routeId" });
+      }
+      updateData.routeId = validRoute.routeId;
     }
-  };
-  
 
+    const bus = await Bus.findOneAndUpdate(
+      { busNumber: { $regex: `^${trimmedBusNumber}$`, $options: "i" } },
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
 
+    if (!bus) return res.status(404).json({ message: "Bus not found" });
 
-// ✅ Delete bus (Admin)
+    res.status(200).json({ message: "Bus updated successfully", bus });
+  } catch (err) {
+    console.error("UpdateBus Error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+// ✅ Delete bus (Admin only)
 const deleteBus = async (req, res) => {
   try {
-    const busNumber  = req.params.busNumber;
-    
-    const bus = await Bus.findOneAndDelete({ busNumber });
+    const trimmedBusNumber = req.params.busNumber.trim();
+
+    const bus = await Bus.findOneAndDelete({
+      busNumber: { $regex: `^${trimmedBusNumber}$`, $options: "i" },
+    });
+
     if (!bus) return res.status(404).json({ message: "Bus not found" });
+
     res.status(200).json({ message: "Bus deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
-// ✅ Search buses by origin, destination, or busType
+
+// ✅ Search buses by source, destination, and type
 const searchBuses = async (req, res) => {
   try {
     let { source, destination, type } = req.query;
-
-    // Trim any extra spaces or newlines
     source = source?.trim();
     destination = destination?.trim();
     type = type?.trim();
 
-    console.log("=== Search Buses Debug ===");
-    console.log("Received query params:", { source, destination, type });
+    if (!source || !destination)
+      return res
+        .status(400)
+        .json({ message: "Please provide both source and destination" });
 
-    if (!source || !destination) {
-      console.warn("Missing source or destination!");
-      return res.status(400).json({ message: "Please provide source and destination" });
-    }
+    // Find route
+    const route = await Route.findOne({
+      source: { $regex: `^${source}$`, $options: "i" },
+      destination: { $regex: `^${destination}$`, $options: "i" },
+    });
+    if (!route)
+      return res
+        .status(404)
+        .json({ message: "No route found for given source/destination" });
 
-    // Step 1: Find route
-    const route = await Route.findOne({ source, destination });
-    console.log("Route found:", route);
-
-    if (!route) {
-      console.warn("No route found for given source/destination");
-      return res.status(404).json({
-        message: "No route found for the given source and destination",
-      });
-    }
-
-    // Step 2: Build query for buses
     const query = { routeId: route.routeId };
-    if (type) query.type = type;
-    console.log("Bus query:", query);
+    if (type) query.type = { $regex: `^${type}$`, $options: "i" };
 
-    // Step 3: Find buses
     const buses = await Bus.find(query);
-    console.log("Buses found:", buses);
+    if (!buses.length)
+      return res
+        .status(404)
+        .json({ message: "No buses found for the selected route/type" });
 
-    if (!buses.length) {
-      console.warn("No buses found for the selected route/type");
-      return res.status(404).json({
-        message: "No buses found for the selected route/type",
-      });
-    }
-
-    // Step 4: Attach route info to each bus for clarity
-    const busesWithRoute = buses.map(bus => ({ ...bus.toObject(), route }));
-    console.log("Final buses with route info:", busesWithRoute);
+    const busesWithRoute = buses.map((bus) => ({
+      ...bus.toObject(),
+      route,
+    }));
 
     res.status(200).json({ buses: busesWithRoute });
-
   } catch (err) {
-    console.error("Search Buses Error:", err);
-    res.status(500).json({
-      message: "Server error",
-      error: err.message,
-    });
+    console.error("SearchBuses Error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
-
 
 module.exports = {
   addBus,

@@ -9,15 +9,15 @@ const {
   searchBuses,
 } = require("../controllers/busController");
 
-const { authBooking } = require("../models/middleware/authMiddleware");
-const { adminCheck } = require("../models/middleware/adminMiddleware");
+const { authBooking } = require("../models/middleware/authMiddleware"); // Temporary auth
+const { adminCheck } = require("../models/middleware/adminMiddleware"); // Admin only
 
-// Public 
+// 🚌 Public routes
 router.get("/", getAllBuses);
-router.get("/search", searchBuses); 
+router.get("/search", searchBuses);
 router.get("/:busNumber", getBusByNumber);
 
-// Admin protected 
+// 🛠️ Admin protected routes
 router.post("/add", authBooking, adminCheck, addBus);
 router.put("/:busNumber", authBooking, adminCheck, updateBus);
 router.delete("/:busNumber", authBooking, adminCheck, deleteBus);
