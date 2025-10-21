@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const BookingPage = () => {
   const [fromCity, setFromCity] = useState("");
   const [toCity, setToCity] = useState("");
   const [type, setType] = useState("");
-  const [journeyDate, setJourneyDate] = useState(""); // ✅ NEW STATE
+  const [journeyDate, setJourneyDate] = useState("");
   const [cities, setCities] = useState([]);
   const [busTypes, setBusTypes] = useState([]);
   const [buses, setBuses] = useState([]);
   const [filteredBuses, setFilteredBuses] = useState([]);
   const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCitiesAndTypes = async () => {
@@ -37,7 +39,6 @@ const BookingPage = () => {
     fetchCitiesAndTypes();
   }, []);
 
-  // ✅ Search buses (by source, destination, type, and date)
   const handleSearch = async () => {
     if (!fromCity || !toCity || !journeyDate) {
       setError("Please select source, destination, and journey date.");
@@ -51,10 +52,9 @@ const BookingPage = () => {
           source: fromCity,
           destination: toCity,
           type,
-          journeyDate, // ✅ include date in request
+          journeyDate,
         },
       });
-      alert(JSON.stringify(res.data.buses, null, 2));
 
       setBuses(res.data.buses);
       setFilteredBuses(res.data.buses);
@@ -71,6 +71,16 @@ const BookingPage = () => {
         bus.busName.toLowerCase().includes(query.toLowerCase())
       )
     );
+  };
+
+  const handleBookNow = (bus) => {
+    // Navigate to seat booking page with bus details
+    navigate("/seats", {
+      state: {
+        bus: bus,
+        journeyDate: journeyDate
+      }
+    });
   };
 
   return (
@@ -133,7 +143,7 @@ const BookingPage = () => {
               value={journeyDate}
               onChange={(e) => setJourneyDate(e.target.value)}
               className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-red-500"
-              min={new Date().toISOString().split("T")[0]} // prevent past dates
+              min={new Date().toISOString().split("T")[0]}
             />
 
             {/* Search Button */}
@@ -165,10 +175,10 @@ const BookingPage = () => {
           ) : (
             filteredBuses.map((bus) => (
               <div
-                key={bus._id}
+                key={bus.busNumber}
                 className="bg-white shadow-md p-6 rounded-lg flex justify-between items-center hover:shadow-lg transition"
               >
-                <div>
+                <div className="flex-1">
                   <h2 className="text-xl font-semibold text-red-600">
                     {bus.busName}
                   </h2>
@@ -181,16 +191,26 @@ const BookingPage = () => {
                     {bus.route.duration}
                   </p>
                   <p className="text-gray-500">
-                    Seats Available: {bus.seatInfo.availableSeats ?? "N/A"}
+                    Seats Available: {bus.seatInfo?.availableSeats ?? "N/A"}
+                  </p>
+                  <p className="text-gray-500">
+                    Operators: {bus.operatorName1} ({bus.operatorPhone1}) 
+                    {bus.operatorName2 && `, ${bus.operatorName2} (${bus.operatorPhone2})`}
                   </p>
                 </div>
 
-                <div className="text-right">
+                <div className="text-right ml-4">
                   <p className="text-lg font-bold text-gray-800">
-                    ₹{bus.seatInfo.price ?? "N/A"}
+                    ₹{bus.seatInfo?.price ?? "N/A"}
                   </p>
-                  <button className="mt-2 bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 transition">
-                    Book
+                  <p className="text-sm text-gray-500 mb-2">
+                    per seat
+                  </p>
+                  <button 
+                    onClick={() => handleBookNow(bus)}
+                    className="mt-2 bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 transition"
+                  >
+                    Book Now
                   </button>
                 </div>
               </div>
