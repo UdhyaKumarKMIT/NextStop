@@ -1,6 +1,6 @@
 const Bus = require("../models/Bus");
 const Route = require("../models/Route");
-
+const Seat = require("../models/Seat");
 // ✅ Add new bus (Admin only)
 const addBus = async (req, res) => {
   try {
@@ -131,50 +131,120 @@ const deleteBus = async (req, res) => {
   }
 };
 
-// ✅ Search buses by source, destination, and type
 const searchBuses = async (req, res) => {
   try {
-    let { source, destination, type } = req.query;
+    let { source, destination, type, journeyDate } = req.query;
+
     source = source?.trim();
     destination = destination?.trim();
     type = type?.trim();
 
-    if (!source || !destination)
-      return res
-        .status(400)
-        .json({ message: "Please provide both source and destination" });
+    if (!source || !destination || !journeyDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide source, destination, and journey date",
+      });
+    }
 
-    // Find route
+    // Parse journey date
+    const startOfDay = new Date(journeyDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(journeyDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Find route first
     const route = await Route.findOne({
       source: { $regex: `^${source}$`, $options: "i" },
       destination: { $regex: `^${destination}$`, $options: "i" },
     });
-    
-    if (!route)
-      return res
-        .status(404)
-        .json({ message: "No route found for given source/destination" });
 
-    const query = { routeId: route.routeId };
-    if (type) query.type = { $regex: `^${type}$`, $options: "i" };
+    if (!route) {
+      return res.status(404).json({ 
+        success: false,
+        message: "No route found" 
+      });
+    }
 
-    const buses = await Bus.find(query);
-    if (!buses.length)
-      return res
-        .status(404)
-        .json({ message: "No buses found for the selected route/type" });
+    // Build bus query
+    const busQuery = { routeId: route.routeId };
+    if (type) busQuery.type = { $regex: `^${type}$`, $options: "i" };
 
-    const busesWithRoute = buses.map((bus) => ({
-      ...bus.toObject(),
-      route,
-    }));
+    // Find buses
+    const buses = await Bus.find(busQuery);
 
-    res.status(200).json({ buses: busesWithRoute });
+    if (!buses.length) {
+      return res.status(404).json({ 
+        success: false,
+        message: "No buses found for this route" 
+      });
+    }
+
+    // Get bus numbers
+    const busNumbers = buses.map(bus => bus.busNumber);
+
+    // Find seats for all buses on the journey date
+    const seats = await Seat.find({
+      busNumber: { $in: busNumbers },
+      date: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      }
+    });
+
+    // Create a map for quick seat lookup
+    const seatMap = new Map();
+    seats.forEach(seat => {
+      seatMap.set(seat.busNumber, seat);
+    });
+
+    // Combine bus data with seat info
+    const busesWithDetails = buses.map(bus => {
+      const seatInfo = seatMap.get(bus.busNumber) || {
+        busNumber: bus.busNumber,
+        date: startOfDay,
+        availableSeats: 0,
+        seats: [],
+        price: 0
+      };
+
+      return {
+        busNumber: bus.busNumber,
+        busName: bus.busName,
+        type: bus.type,
+        operatorName1: bus.operatorName1,
+        operatorPhone1: bus.operatorPhone1,
+        operatorName2: bus.operatorName2,
+        operatorPhone2: bus.operatorPhone2,
+        route: {
+          routeId: route.routeId,
+          source: route.source,
+          destination: route.destination,
+          distance: route.distance,
+          duration: route.duration
+        },
+        seatInfo: seatInfo
+      };
+    });
+    console.log(busesWithDetails)
+    res.status(200).json({ 
+      success: true,
+      message: "Buses found successfully",
+      count: busesWithDetails.length,
+      buses: busesWithDetails 
+    });
+
   } catch (err) {
     console.error("SearchBuses Error:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    res.status(500).json({ 
+      success: false,
+      message: "Server error", 
+      error: err.message 
+    });
   }
 };
+
+
 
 module.exports = {
   addBus,
