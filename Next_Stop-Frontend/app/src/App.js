@@ -11,6 +11,7 @@ import TicketPage from './pages/TicketPage';
 import ProfilePage from './pages/ProfilePage';
 import FinalizePayment from './pages/FinalizePayment';
 import ResetForm from './components/ResetForm';
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
       <Route path="/ticket" element={<TicketPage />} />
       <Route path="/profile" element={<ProfilePage />} />
 
+      <Route path="/admin" element={<AdminDashboard />} />
     </Routes>
   );
 }

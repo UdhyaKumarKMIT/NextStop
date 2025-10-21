@@ -40,9 +40,28 @@ async function seed() {
     });
     console.log("✅ MongoDB Connected to NextStop Database");
 
+    // Clear existing data
+    console.log("🧹 Clearing existing data...");
+    await Payment.deleteMany({});
+    await Booking.deleteMany({});
+    await Seat.deleteMany({});
+    await Bus.deleteMany({});
+    await Route.deleteMany({});
+    await User.deleteMany({});
+    console.log("✅ All collections cleared.");
 
-    // Insert all collections in proper order
-    const insertedUsers = await User.insertMany(users);
+    console.log("🌱 Seeding new data...");
+
+    // Hash user passwords
+    const usersToInsert = await Promise.all(
+      users.map(async (user) => {
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(user.password, salt);
+        return { ...user, password: hashedPassword };
+      })
+    );
+    const insertedUsers = await User.insertMany(usersToInsert);
+    
     const insertedRoutes = await Route.insertMany(routes);
     const insertedBuses = await Bus.insertMany(buses);
     const insertedSeats = await Seat.insertMany(seats);

@@ -5,7 +5,6 @@ import axios from "axios";
 const BookingPage = () => {
   const [fromCity, setFromCity] = useState("");
   const [toCity, setToCity] = useState("");
-  const [date, setDate] = useState("");
   const [type, setType] = useState("");
   const [cities, setCities] = useState([]);
   const [busTypes, setBusTypes] = useState([]);
@@ -13,24 +12,24 @@ const BookingPage = () => {
   const [filteredBuses, setFilteredBuses] = useState([]);
   const [error, setError] = useState("");
 
-  // Fetch cities and bus types from backend
+  // ✅ Fetch all cities (from Route model) and all bus types (from Bus model)
   useEffect(() => {
     const fetchCitiesAndTypes = async () => {
       try {
-        const routesRes = await axios.get("http://localhost:5050/api/routes"); // backend endpoint to get all routes
-        const busesRes = await axios.get("http://localhost:5050/api/buses"); // backend endpoint to get all buses
+        const routesRes = await axios.get("http://localhost:5050/api/routes");
+        const busesRes = await axios.get("http://localhost:5050/api/buses");
 
-        // Unique cities from startPoint and endPoint
+        // ✅ Unique cities from source and destination
         const uniqueCities = Array.from(
           new Set([
-            ...routesRes.data.routes.map(r => r.startPoint),
-            ...routesRes.data.routes.map(r => r.endPoint)
+            ...routesRes.data.routes.map((r) => r.source),
+            ...routesRes.data.routes.map((r) => r.destination),
           ])
         );
         setCities(uniqueCities);
 
-        // Unique bus types
-        const uniqueTypes = Array.from(new Set(busesRes.data.buses.map(b => b.type)));
+        // ✅ Unique bus types
+        const uniqueTypes = Array.from(new Set(busesRes.data.buses.map((b) => b.type)));
         setBusTypes(uniqueTypes);
       } catch (err) {
         console.error("Error fetching cities or bus types:", err);
@@ -40,10 +39,10 @@ const BookingPage = () => {
     fetchCitiesAndTypes();
   }, []);
 
-  // Fetch buses based on search
+  // ✅ Search buses (by source, destination, type)
   const handleSearch = async () => {
-    if (!fromCity || !toCity || !date) {
-      setError("Please select from city, to city and date");
+    if (!fromCity || !toCity) {
+      setError("Please select both source and destination.");
       return;
     }
 
@@ -51,22 +50,22 @@ const BookingPage = () => {
     try {
       const res = await axios.get("http://localhost:5050/api/buses/search", {
         params: {
-          startPoint: fromCity,
-          endPoint: toCity,
-          date,
-          type
+          source: fromCity,
+          destination: toCity,
+          type,
         },
       });
+
       setBuses(res.data.buses);
       setFilteredBuses(res.data.buses);
     } catch (err) {
-      setError(err.response?.data?.message || "Error fetching buses");
+      setError(err.response?.data?.message || "Error fetching buses.");
       setBuses([]);
       setFilteredBuses([]);
     }
   };
 
-  // Optional: search by bus name locally
+  // ✅ Local search by bus name
   const handleNameSearch = (query) => {
     setFilteredBuses(
       buses.filter((bus) =>
@@ -84,9 +83,10 @@ const BookingPage = () => {
           Book Your Bus
         </h1>
 
-        {/* Search Section */}
+        {/* 🔍 Search Section */}
         <div className="bg-white shadow-lg rounded-xl p-6 max-w-4xl mx-auto mb-10">
-          <div className="grid md:grid-cols-4 gap-4">
+          <div className="grid md:grid-cols-3 gap-4">
+            {/* From City */}
             <select
               value={fromCity}
               onChange={(e) => setFromCity(e.target.value)}
@@ -94,10 +94,13 @@ const BookingPage = () => {
             >
               <option value="">From</option>
               {cities.map((city) => (
-                <option key={city} value={city}>{city}</option>
+                <option key={city} value={city}>
+                  {city}
+                </option>
               ))}
             </select>
 
+            {/* To City */}
             <select
               value={toCity}
               onChange={(e) => setToCity(e.target.value)}
@@ -105,17 +108,13 @@ const BookingPage = () => {
             >
               <option value="">To</option>
               {cities.map((city) => (
-                <option key={city} value={city}>{city}</option>
+                <option key={city} value={city}>
+                  {city}
+                </option>
               ))}
             </select>
 
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-red-500"
-            />
-
+            {/* Bus Type */}
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
@@ -123,18 +122,22 @@ const BookingPage = () => {
             >
               <option value="">Any Type</option>
               {busTypes.map((t) => (
-                <option key={t} value={t}>{t}</option>
+                <option key={t} value={t}>
+                  {t}
+                </option>
               ))}
             </select>
 
+            {/* Search Button */}
             <button
               onClick={handleSearch}
-              className="col-span-4 mt-4 bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition"
+              className="col-span-3 mt-4 bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition"
             >
               Search Buses
             </button>
           </div>
 
+          {/* 🔎 Search by Bus Name */}
           <input
             type="text"
             placeholder="Search by bus name..."
@@ -145,7 +148,7 @@ const BookingPage = () => {
           {error && <p className="text-red-600 mt-2">{error}</p>}
         </div>
 
-        {/* Bus Results */}
+        {/* 🚌 Bus Results */}
         <div className="max-w-4xl mx-auto space-y-6">
           {filteredBuses.length === 0 ? (
             <p className="text-center text-gray-600">
@@ -158,15 +161,26 @@ const BookingPage = () => {
                 className="bg-white shadow-md p-6 rounded-lg flex justify-between items-center hover:shadow-lg transition"
               >
                 <div>
-                  <h2 className="text-xl font-semibold text-red-600">{bus.busName}</h2>
+                  <h2 className="text-xl font-semibold text-red-600">
+                    {bus.busName}
+                  </h2>
                   <p className="text-gray-700">{bus.type}</p>
                   <p className="text-gray-500">
-                    Departure: {bus.departureTime} | Arrival: {bus.arrivalTime}
+                    Route: {bus.route.source} → {bus.route.destination}
                   </p>
-                  <p className="text-gray-500">Seats Available: {bus.availableSeats}</p>
+                  <p className="text-gray-500">
+                    Distance: {bus.route.distance} km | Duration:{" "}
+                    {bus.route.duration}
+                  </p>
+                  <p className="text-gray-500">
+                    Seats Available: {bus.availableSeats ?? "N/A"}
+                  </p>
                 </div>
+
                 <div className="text-right">
-                  <p className="text-lg font-bold text-gray-800">₹{bus.fare}</p>
+                  <p className="text-lg font-bold text-gray-800">
+                    ₹{bus.fare ?? "N/A"}
+                  </p>
                   <button className="mt-2 bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 transition">
                     Book
                   </button>

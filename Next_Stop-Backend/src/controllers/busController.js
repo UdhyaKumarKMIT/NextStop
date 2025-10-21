@@ -149,6 +149,7 @@ const searchBuses = async (req, res) => {
       source: { $regex: `^${source}$`, $options: "i" },
       destination: { $regex: `^${destination}$`, $options: "i" },
     });
+    
     if (!route)
       return res
         .status(404)

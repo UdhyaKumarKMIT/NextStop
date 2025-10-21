@@ -15,4 +15,3 @@ const seatSchema = new mongoose.Schema({
 module.exports = mongoose.model("Seat", seatSchema);
 
 
-const mongoose = require("mongoose");
