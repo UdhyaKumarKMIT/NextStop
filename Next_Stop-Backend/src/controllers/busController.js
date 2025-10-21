@@ -99,6 +99,19 @@ const updateBus = async (req, res) => {
       updateData.routeId = validRoute.routeId;
     }
 
+
+     // ✅ Map nested operator objects to flat fields
+    if (updateData.operator1) {
+      updateData.operatorName1 = updateData.operator1.name;
+      updateData.operatorPhone1 = updateData.operator1.phone;
+      delete updateData.operator1;
+    }
+    if (updateData.operator2) {
+      updateData.operatorName2 = updateData.operator2.name;
+      updateData.operatorPhone2 = updateData.operator2.phone;
+      delete updateData.operator2;
+    }
+
     const bus = await Bus.findOneAndUpdate(
       { busNumber: { $regex: `^${trimmedBusNumber}$`, $options: "i" } },
       { $set: updateData },

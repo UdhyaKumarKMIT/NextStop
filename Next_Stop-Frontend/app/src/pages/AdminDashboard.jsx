@@ -43,6 +43,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [admin, setAdmin] = useState(null);
+  const [feedbacks, setFeedbacks] = useState([]);
   const navigate = useNavigate();
 
   // Form states
@@ -62,7 +63,7 @@ const AdminDashboard = () => {
     destination: "",
     distance: "",
     duration: "",
-    fare: ""
+
   });
 
   const [updateBusForm, setUpdateBusForm] = useState({
@@ -70,7 +71,8 @@ const AdminDashboard = () => {
     type: "AC",
     routeId: "",
     totalSeats: 40,
-    operator1: { name: "", phone: "" }
+    operator1: { name: "", phone: "" },
+    operator2: { name: "", phone: "" }
   });
 
   const [updateRouteForm, setUpdateRouteForm] = useState({
@@ -99,6 +101,7 @@ const AdminDashboard = () => {
     setAdmin(JSON.parse(adminData));
     fetchBuses();
     fetchRoutes();
+    fetchFeedbacks();
   }, [navigate]);
 
   const showMessage = (type, text) => {
@@ -125,6 +128,41 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleFetchBus = async () => {
+  if (!updateBusNumber.trim()) {
+    showMessage("error", "Please enter a bus number to search");
+    return;
+  }
+  setLoading(true);
+  try {
+    const response = await api.get(`/buses/${updateBusNumber}`);
+    const bus = response.data.bus;
+
+    setUpdateBusForm({
+      busName: bus.busName || "",
+      type: bus.type || "AC",
+      routeId: bus.routeId || "",
+      totalSeats: bus.totalSeats || 40,
+       operator1: {
+        name: bus.operatorName1 || "",
+        phone: bus.operatorPhone1 || ""
+      },
+      operator2: {
+        name: bus.operatorName2 || "",
+        phone: bus.operatorPhone2 || ""
+      },
+    });
+
+    showMessage("success", "Bus data loaded. You can edit now!");
+  } catch (err) {
+    showMessage("error", err.response?.data?.message || "Bus not found");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
   const fetchRoutes = async () => {
     try {
       const response = await api.get("/routes");
@@ -136,6 +174,18 @@ const AdminDashboard = () => {
       }
     }
   };
+
+
+  const fetchFeedbacks = async () => {
+  try {
+    const response = await api.get("/feedbacks/getfeedbacks");
+    setFeedbacks(response.data.feedbacks || []);
+  } catch (err) {
+    console.error("Error fetching feedbacks:", err);
+  }
+};
+
+
 
   const handleAddBus = async (e) => {
     e.preventDefault();
@@ -257,6 +307,43 @@ const AdminDashboard = () => {
     }
   };
 
+
+  const handleFetchRoute = async () => {
+  if (!updateRouteId.trim()) {
+    showMessage("error", "Please enter a route ID to fetch");
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const res = await api.get(`/routes/${updateRouteId}`);
+    const route = res.data.route;
+
+    if (!route) {
+      showMessage("error", "Route not found");
+      return;
+    }
+
+    // ✅ Prefill update form fields
+    setUpdateRouteForm({
+      source: route.source || "",
+      destination: route.destination || "",
+      distance: route.distance || "",
+      duration: route.duration || "",
+    });
+
+    showMessage("success", "Route fetched successfully!");
+  } catch (error) {
+    console.error("Error fetching route:", error);
+    showMessage("error", error.response?.data?.message || "Failed to fetch route");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
+
   const handleUpdateRoute = async (e) => {
     e.preventDefault();
     if (!updateRouteId.trim()) {
@@ -274,7 +361,6 @@ const AdminDashboard = () => {
         destination: "",
         distance: "",
         duration: "",
-        fare: ""
       });
       fetchRoutes();
     } catch (error) {
@@ -403,71 +489,89 @@ const AdminDashboard = () => {
       case "updateBus":
         return (
           <div>
-            <h2 className="text-2xl font-bold mb-4">Update Bus Details</h2>
-            <div className="space-y-4">
-              <input
-                className="input border-red-300 focus:ring-red-500 w-1/2"
-                placeholder="Bus Number to Update"
-                value={updateBusNumber}
-                onChange={(e) => setUpdateBusNumber(e.target.value)}
-              />
-              <form onSubmit={handleUpdateBus} className="grid grid-cols-2 gap-4">
-                <input
-                  className="input border-red-300 focus:ring-red-500"
-                  placeholder="Bus Name"
-                  value={updateBusForm.busName}
-                  onChange={(e) => setUpdateBusForm({ ...updateBusForm, busName: e.target.value })}
-                />
-                <select
-                  className="input border-red-300 focus:ring-red-500"
-                  value={updateBusForm.type}
-                  onChange={(e) => setUpdateBusForm({ ...updateBusForm, type: e.target.value })}
-                >
-                  <option>AC</option>
-                  <option>Non-AC</option>
-                  <option>Sleeper</option>
-                </select>
-                <input
-                  className="input border-red-300 focus:ring-red-500"
-                  placeholder="Route ID"
-                  value={updateBusForm.routeId}
-                  onChange={(e) => setUpdateBusForm({ ...updateBusForm, routeId: e.target.value })}
-                />
-                <input
-                  className="input border-red-300 focus:ring-red-500"
-                  placeholder="Total Seats"
-                  type="number"
-                  value={updateBusForm.totalSeats}
-                  onChange={(e) => setUpdateBusForm({ ...updateBusForm, totalSeats: e.target.value })}
-                />
-                <input
-                  className="input border-red-300 focus:ring-red-500"
-                  placeholder="Operator Name 1"
-                  value={updateBusForm.operator1.name}
-                  onChange={(e) => setUpdateBusForm({
-                    ...updateBusForm,
-                    operator1: { ...updateBusForm.operator1, name: e.target.value }
-                  })}
-                />
-                <input
-                  className="input border-red-300 focus:ring-red-500"
-                  placeholder="Operator Phone 1"
-                  value={updateBusForm.operator1.phone}
-                  onChange={(e) => setUpdateBusForm({
-                    ...updateBusForm,
-                    operator1: { ...updateBusForm.operator1, phone: e.target.value }
-                  })}
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="col-span-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
-                >
-                  {loading ? "Updating..." : "Update Bus"}
-                </button>
-              </form>
-            </div>
-          </div>
+  <h2 className="text-2xl font-bold mb-4">Update Bus Details</h2>
+
+  {/* Search Bus */}
+  <div className="flex items-center space-x-2 mb-4">
+    <input
+      className="input border-red-300 focus:ring-red-500 w-1/2"
+      placeholder="Bus Number to Update"
+      value={updateBusNumber}
+      onChange={(e) => setUpdateBusNumber(e.target.value)}
+    />
+    <button
+      type="button"
+      onClick={handleFetchBus}
+      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition"
+    >
+      {loading ? "Loading..." : "Search"}
+    </button>
+  </div>
+
+  {/* Update Form */}
+  <form onSubmit={handleUpdateBus} className="grid grid-cols-2 gap-4">
+    <input
+      className="input border-red-300 focus:ring-red-500"
+      placeholder="Bus Name"
+      value={updateBusForm.busName}
+      onChange={(e) => setUpdateBusForm({ ...updateBusForm, busName: e.target.value })}
+    />
+    <select
+      className="input border-red-300 focus:ring-red-500"
+      value={updateBusForm.type}
+      onChange={(e) => setUpdateBusForm({ ...updateBusForm, type: e.target.value })}
+    >
+      <option>AC</option>
+      <option>Non-AC</option>
+      <option>Sleeper</option>
+    </select>
+    <input
+      className="input border-red-300 focus:ring-red-500"
+      placeholder="Route ID"
+      value={updateBusForm.routeId}
+      onChange={(e) => setUpdateBusForm({ ...updateBusForm, routeId: e.target.value })}
+    />
+    <input
+      className="input border-red-300 focus:ring-red-500"
+      placeholder="Total Seats"
+      type="number"
+      value={updateBusForm.totalSeats}
+      onChange={(e) => setUpdateBusForm({ ...updateBusForm, totalSeats: e.target.value })}
+    />
+
+    <input
+      className="input border-red-300 focus:ring-red-500"
+      placeholder="Operator Name 1"
+      value={updateBusForm.operator1?.name || ""}
+      onChange={(e) => setUpdateBusForm({ ...updateBusForm, operator1: { ...updateBusForm.operator1, name: e.target.value } })}
+    />
+    <input
+      className="input border-red-300 focus:ring-red-500"
+      placeholder="Operator Phone 1"
+      value={updateBusForm.operator1?.phone || ""}
+      onChange={(e) => setUpdateBusForm({ ...updateBusForm, operator1: { ...updateBusForm.operator1, phone: e.target.value } })}
+    />
+    <input
+      className="input border-red-300 focus:ring-red-500"
+      placeholder="Operator Name 2"
+      value={updateBusForm.operator2?.name || ""}
+      onChange={(e) => setUpdateBusForm({ ...updateBusForm, operator2: { ...updateBusForm.operator2, name: e.target.value } })}
+    />
+    <input
+      className="input border-red-300 focus:ring-red-500"
+      placeholder="Operator Phone 2"
+      value={updateBusForm.operator2?.phone || ""}
+      onChange={(e) => setUpdateBusForm({ ...updateBusForm, operator2: { ...updateBusForm.operator2, phone: e.target.value } })}
+    />
+    <button
+      type="submit"
+      disabled={loading}
+      className="col-span-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
+    >
+      {loading ? "Updating..." : "Update Bus"}
+    </button>
+  </form>
+</div>
         );
 
       case "addRoute":
@@ -511,14 +615,7 @@ const AdminDashboard = () => {
                 onChange={(e) => setRouteForm({ ...routeForm, duration: e.target.value })}
                 required
               />
-              <input
-                className="input border-red-300 focus:ring-red-500"
-                placeholder="Fare (₹)"
-                type="number"
-                value={routeForm.fare}
-                onChange={(e) => setRouteForm({ ...routeForm, fare: e.target.value })}
-                required
-              />
+             
               <button
                 type="submit"
                 disabled={loading}
@@ -553,92 +650,104 @@ const AdminDashboard = () => {
         );
 
       case "updateRoute":
-        return (
-          <div>
-            <h2 className="text-2xl font-bold mb-4">Update Route</h2>
-            <div className="space-y-4">
-              <input
-                className="input border-red-300 focus:ring-red-500 w-1/2"
-                placeholder="Route ID to Update"
-                value={updateRouteId}
-                onChange={(e) => setUpdateRouteId(e.target.value)}
-              />
-              <form onSubmit={handleUpdateRoute} className="grid grid-cols-2 gap-4">
-                <input
-                  className="input border-red-300 focus:ring-red-500"
-                  placeholder="Source"
-                  value={updateRouteForm.source}
-                  onChange={(e) => setUpdateRouteForm({ ...updateRouteForm, source: e.target.value })}
-                />
-                <input
-                  className="input border-red-300 focus:ring-red-500"
-                  placeholder="Destination"
-                  value={updateRouteForm.destination}
-                  onChange={(e) => setUpdateRouteForm({ ...updateRouteForm, destination: e.target.value })}
-                />
-                <input
-                  className="input border-red-300 focus:ring-red-500"
-                  placeholder="Distance (km)"
-                  type="number"
-                  value={updateRouteForm.distance}
-                  onChange={(e) => setUpdateRouteForm({ ...updateRouteForm, distance: e.target.value })}
-                />
-                <input
-                  className="input border-red-300 focus:ring-red-500"
-                  placeholder="Duration"
-                  value={updateRouteForm.duration}
-                  onChange={(e) => setUpdateRouteForm({ ...updateRouteForm, duration: e.target.value })}
-                />
-                <input
-                  className="input border-red-300 focus:ring-red-500"
-                  placeholder="Fare (₹)"
-                  type="number"
-                  value={updateRouteForm.fare}
-                  onChange={(e) => setUpdateRouteForm({ ...updateRouteForm, fare: e.target.value })}
-                />
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="col-span-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
-                >
-                  {loading ? "Updating..." : "Update Route"}
-                </button>
-              </form>
-            </div>
-          </div>
-        );
+       case "updateRoute":
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-4">Update Route Details</h2>
+
+      {/* 🔍 Search Route Section */}
+      <div className="flex items-center space-x-2 mb-4">
+        <input
+          className="input border-red-300 focus:ring-red-500 w-1/2"
+          placeholder="Enter Route ID to Update"
+          value={updateRouteId}
+          onChange={(e) => setUpdateRouteId(e.target.value)}
+        />
+        <button
+          type="button"
+          onClick={handleFetchRoute}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition"
+        >
+          {loading ? "Loading..." : "Search"}
+        </button>
+      </div>
+
+      {/* ✏️ Update Route Form */}
+      <form onSubmit={handleUpdateRoute} className="grid grid-cols-2 gap-4">
+        <input
+          className="input border-red-300 focus:ring-red-500"
+          placeholder="Source"
+          value={updateRouteForm.source}
+          onChange={(e) =>
+            setUpdateRouteForm({ ...updateRouteForm, source: e.target.value })
+          }
+        />
+        <input
+          className="input border-red-300 focus:ring-red-500"
+          placeholder="Destination"
+          value={updateRouteForm.destination}
+          onChange={(e) =>
+            setUpdateRouteForm({ ...updateRouteForm, destination: e.target.value })
+          }
+        />
+        <input
+          className="input border-red-300 focus:ring-red-500"
+          placeholder="Distance (km)"
+          type="number"
+          value={updateRouteForm.distance}
+          onChange={(e) =>
+            setUpdateRouteForm({ ...updateRouteForm, distance: e.target.value })
+          }
+        />
+        <input
+          className="input border-red-300 focus:ring-red-500"
+          placeholder="Duration (e.g. 6h 30m)"
+          value={updateRouteForm.duration}
+          onChange={(e) =>
+            setUpdateRouteForm({ ...updateRouteForm, duration: e.target.value })
+          }
+        />
+        
+        <button
+          type="submit"
+          disabled={loading}
+          className="col-span-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition disabled:opacity-50"
+        >
+          {loading ? "Updating..." : "Update Route"}
+        </button>
+      </form>
+    </div>
+  );
+
 
       case "feedbacks":
-        return (
-          <div>
-            <h2 className="text-2xl font-bold mb-4">Customer Feedbacks</h2>
-            <div className="space-y-4">
-              <div className="bg-white p-4 rounded-lg shadow">
-                <div className="flex items-center mb-2">
-                  <span className="text-yellow-500">⭐ ⭐ ⭐ ⭐ ⭐</span>
-                  <span className="ml-2 text-sm text-gray-600">John Doe</span>
-                </div>
-                <p className="text-gray-700">"Great service, loved the comfort! The bus was clean and arrived on time."</p>
+  return (
+    <div>
+      <h2 className="text-2xl font-bold mb-4">Customer Feedbacks</h2>
+      <div className="space-y-4 max-h-96 overflow-y-auto">
+        {feedbacks.length > 0 ? (
+          feedbacks.map((fb) => (
+            <div key={fb._id} className="bg-white p-4 rounded-lg shadow">
+              <div className="flex items-center mb-2">
+                <span className="text-yellow-500">
+                  {"⭐".repeat(fb.rating)}
+                </span>
+                <span className="ml-2 text-sm text-gray-600">{fb.user?.username}</span>
               </div>
-              
-              <div className="bg-white p-4 rounded-lg shadow">
-                <div className="flex items-center mb-2">
-                  <span className="text-yellow-500">⭐ ⭐ ⭐ ⭐</span>
-                  <span className="ml-2 text-sm text-gray-600">Sarah Smith</span>
-                </div>
-                <p className="text-gray-700">"Timings were accurate and the staff was very helpful. Will travel again!"</p>
-              </div>
-              
-              <div className="bg-white p-4 rounded-lg shadow">
-                <div className="flex items-center mb-2">
-                  <span className="text-yellow-500">⭐ ⭐ ⭐ ⭐ ⭐</span>
-                  <span className="ml-2 text-sm text-gray-600">Mike Johnson</span>
-                </div>
-                <p className="text-gray-700">"Bus was clean and comfortable. The AC was working perfectly throughout the journey."</p>
-              </div>
+              <p className="text-gray-700">{fb.comment}</p>
+              {fb.bus && (
+                <p className="text-xs text-gray-500">
+                  Bus: {fb.bus.busNumber} ({fb.bus.busName})
+                </p>
+              )}
             </div>
-          </div>
-        );
+          ))
+        ) : (
+          <p className="text-gray-500 text-center py-4">No feedbacks found</p>
+        )}
+      </div>
+    </div>
+  );
 
       default:
         return (
