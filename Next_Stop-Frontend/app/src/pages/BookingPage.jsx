@@ -6,20 +6,19 @@ const BookingPage = () => {
   const [fromCity, setFromCity] = useState("");
   const [toCity, setToCity] = useState("");
   const [type, setType] = useState("");
+  const [journeyDate, setJourneyDate] = useState(""); // ✅ NEW STATE
   const [cities, setCities] = useState([]);
   const [busTypes, setBusTypes] = useState([]);
   const [buses, setBuses] = useState([]);
   const [filteredBuses, setFilteredBuses] = useState([]);
   const [error, setError] = useState("");
 
-  // ✅ Fetch all cities (from Route model) and all bus types (from Bus model)
   useEffect(() => {
     const fetchCitiesAndTypes = async () => {
       try {
         const routesRes = await axios.get("http://localhost:5050/api/routes");
         const busesRes = await axios.get("http://localhost:5050/api/buses");
 
-        // ✅ Unique cities from source and destination
         const uniqueCities = Array.from(
           new Set([
             ...routesRes.data.routes.map((r) => r.source),
@@ -28,7 +27,6 @@ const BookingPage = () => {
         );
         setCities(uniqueCities);
 
-        // ✅ Unique bus types
         const uniqueTypes = Array.from(new Set(busesRes.data.buses.map((b) => b.type)));
         setBusTypes(uniqueTypes);
       } catch (err) {
@@ -39,10 +37,10 @@ const BookingPage = () => {
     fetchCitiesAndTypes();
   }, []);
 
-  // ✅ Search buses (by source, destination, type)
+  // ✅ Search buses (by source, destination, type, and date)
   const handleSearch = async () => {
-    if (!fromCity || !toCity) {
-      setError("Please select both source and destination.");
+    if (!fromCity || !toCity || !journeyDate) {
+      setError("Please select source, destination, and journey date.");
       return;
     }
 
@@ -53,9 +51,10 @@ const BookingPage = () => {
           source: fromCity,
           destination: toCity,
           type,
+          journeyDate, // ✅ include date in request
         },
       });
-
+      alert(res.data.message);
       setBuses(res.data.buses);
       setFilteredBuses(res.data.buses);
     } catch (err) {
@@ -65,7 +64,6 @@ const BookingPage = () => {
     }
   };
 
-  // ✅ Local search by bus name
   const handleNameSearch = (query) => {
     setFilteredBuses(
       buses.filter((bus) =>
@@ -85,7 +83,7 @@ const BookingPage = () => {
 
         {/* 🔍 Search Section */}
         <div className="bg-white shadow-lg rounded-xl p-6 max-w-4xl mx-auto mb-10">
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-4 gap-4">
             {/* From City */}
             <select
               value={fromCity}
@@ -128,10 +126,19 @@ const BookingPage = () => {
               ))}
             </select>
 
+            {/* 🗓️ Journey Date */}
+            <input
+              type="date"
+              value={journeyDate}
+              onChange={(e) => setJourneyDate(e.target.value)}
+              className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-red-500"
+              min={new Date().toISOString().split("T")[0]} // prevent past dates
+            />
+
             {/* Search Button */}
             <button
               onClick={handleSearch}
-              className="col-span-3 mt-4 bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition"
+              className="col-span-4 mt-4 bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition"
             >
               Search Buses
             </button>
