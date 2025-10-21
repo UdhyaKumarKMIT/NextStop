@@ -54,7 +54,8 @@ const BookingPage = () => {
           journeyDate, // ✅ include date in request
         },
       });
-      alert(res.data.message);
+      alert(JSON.stringify(res.data.buses, null, 2));
+
       setBuses(res.data.buses);
       setFilteredBuses(res.data.buses);
     } catch (err) {
@@ -180,13 +181,13 @@ const BookingPage = () => {
                     {bus.route.duration}
                   </p>
                   <p className="text-gray-500">
-                    Seats Available: {bus.availableSeats ?? "N/A"}
+                    Seats Available: {bus.seatInfo.availableSeats ?? "N/A"}
                   </p>
                 </div>
 
                 <div className="text-right">
                   <p className="text-lg font-bold text-gray-800">
-                    ₹{bus.fare ?? "N/A"}
+                    ₹{bus.seatInfo.price ?? "N/A"}
                   </p>
                   <button className="mt-2 bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 transition">
                     Book
