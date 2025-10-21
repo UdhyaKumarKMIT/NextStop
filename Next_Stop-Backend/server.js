@@ -14,15 +14,18 @@ connectDB();
 
 // Routes
 const authRoutes = require('./src/routes/authRoutes');
+console.log("✅ Auth routes mounted at /api/auth");
 const busRoutes = require('./src/routes/busRoutes');
 const bookingRoutes = require('./src/routes/bookingRoutes');
 const routeRoutes = require('./src/routes/routeRoutes');
+const auth = require('./src/models/middleware/authMiddleware'); // adjust path as needed
+const feedbackRoutes = require("./src/routes/feedbackRoutes");
 
 app.use('/api/auth', authRoutes);
 app.use('/api/buses', busRoutes);
 app.use('/api/bookings',bookingRoutes);
 app.use('/api/routes',routeRoutes)
-
+app.use("/api/feedbacks", feedbackRoutes);
 
 // Start Server
 const PORT = process.env.PORT || 5050;

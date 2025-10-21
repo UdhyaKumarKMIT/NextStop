@@ -12,6 +12,9 @@ import ProfilePage from './pages/ProfilePage';
 import FinalizePayment from './pages/FinalizePayment';
 import ResetForm from './components/ResetForm';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminRegister from './pages/AdminRegister';
+import AdminLogin from './pages/AdminLogin';
+import AdminForgotPassword from './pages/AdminForgotPassword';
 
 function App() {
   return (
@@ -28,7 +31,11 @@ function App() {
       <Route path="/ticket" element={<TicketPage />} />
       <Route path="/profile" element={<ProfilePage />} />
 
-      <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/admin/login" element={<AdminLogin />} />
+      <Route path="/admin/register" element={<AdminRegister />} />
+      <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
+      <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
     </Routes>
   );
 }
