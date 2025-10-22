@@ -129,7 +129,7 @@ const resetPassword = async (req, res) => {
 
   try {
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) return res.status(404).json({ message: "User not found Register First" });
 
     // ✅ Validate code and expiry
     if (user.resetCode !== code || user.resetCodeExpiry < Date.now()) {
