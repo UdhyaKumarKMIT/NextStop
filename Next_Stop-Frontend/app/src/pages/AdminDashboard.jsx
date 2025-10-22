@@ -502,7 +502,7 @@ const AdminDashboard = () => {
     <button
       type="button"
       onClick={handleFetchBus}
-      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition"
+      className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition"
     >
       {loading ? "Loading..." : "Search"}
     </button>
@@ -666,7 +666,7 @@ const AdminDashboard = () => {
         <button
           type="button"
           onClick={handleFetchRoute}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition"
+          className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition"
         >
           {loading ? "Loading..." : "Search"}
         </button>

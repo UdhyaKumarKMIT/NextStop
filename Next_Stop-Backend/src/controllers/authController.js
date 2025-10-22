@@ -411,6 +411,90 @@ const updateAdminProfile = async (req, res) => {
 };
 
 
+// ========== GET USER PROFILE ==========
+
+// ----------------- GET USER PROFILE -----------------
+const getUserProfile = async (req, res) => {
+  try {
+    // req.user is set by JWT middleware (you'll see that below)
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ user });
+  } catch (err) {
+    console.error("Get User Profile Error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+
+// ============Update user profile ============
+
+const updateUserProfile = async (req, res) => {
+  const { username, email, firstName, lastName, mobileNo, altMobileNo, dob, address } = req.body;
+
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Check username uniqueness
+    if (username && username !== user.username) {
+      const exists = await User.findOne({ username, _id: { $ne: user._id } });
+      if (exists) return res.status(400).json({ message: "Username already exists" });
+      user.username = username;
+    }
+
+    // Check email uniqueness
+    if (email && email !== user.email) {
+      const exists = await User.findOne({ email, _id: { $ne: user._id } });
+      if (exists) return res.status(400).json({ message: "Email already exists" });
+      user.email = email;
+    }
+
+    // Check mobile number uniqueness
+    if (mobileNo && mobileNo !== user.mobileNo) {
+      const exists = await User.findOne({ mobileNo, _id: { $ne: user._id } });
+      if (exists) return res.status(400).json({ message: "Mobile number already exists" });
+      user.mobileNo = mobileNo;
+    }
+
+    // Update optional fields
+    if (firstName !== undefined) user.firstName = firstName;
+    if (lastName !== undefined) user.lastName = lastName;
+    if (altMobileNo !== undefined) user.altMobileNo = altMobileNo;
+    if (dob !== undefined) user.dob = dob;
+    if (address !== undefined) user.address = address;
+
+    await user.save();
+
+    res.json({
+      message: "User profile updated successfully",
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        mobileNo: user.mobileNo,
+        altMobileNo: user.altMobileNo,
+        dob: user.dob,
+        address: user.address
+      }
+    });
+  } catch (err) {
+    console.error("Update User Profile Error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+
+
 
 console.log("✅ Bottom of authController reached");
 
@@ -424,5 +508,7 @@ module.exports = {
   adminForgotPassword,
   adminResetPassword,
   getAdminProfile,
-  updateAdminProfile
+  updateAdminProfile,
+  getUserProfile,
+  updateUserProfile
 };
