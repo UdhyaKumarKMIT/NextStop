@@ -14,13 +14,25 @@ const Navbar = () => {
         NextStop
       </h1>
 
-      {/* Profile Button */}
-      <button
-        onClick={() => navigate("/profile")}
-        className="bg-white text-red-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition"
-      >
-        Profile
-      </button>
+      {/* Right side buttons */}
+      <div className="flex items-center space-x-4">
+        {/* Chatbot Button */}
+        <button
+          onClick={() => navigate("/chatbot")}
+          className="bg-white text-red-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition flex items-center space-x-2"
+        >
+          
+          <span>Chatbot</span>
+        </button>
+
+        {/* Profile Button */}
+        <button
+          onClick={() => navigate("/profile")}
+          className="bg-white text-red-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition"
+        >
+          Profile
+        </button>
+      </div>
     </nav>
   );
 };

@@ -27,5 +27,8 @@
     npm install jwt-decode
 
 
-# to use map feature 
+# To use map feature 
     npm install leaflet
+
+# For chatbot, we used GEMINI
+    npm install @google/generative-ai

@@ -15,6 +15,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminRegister from './pages/AdminRegister';
 import AdminLogin from './pages/AdminLogin';
 import AdminForgotPassword from './pages/AdminForgotPassword';
+import Chatbot from './pages/Chatbot';
 
 function App() {
   return (
@@ -35,6 +36,8 @@ function App() {
       <Route path="/admin/register" element={<AdminRegister />} />
       <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
+      <Route path="/chatbot" element={<Chatbot />} />
 
     </Routes>
   );
