@@ -25,3 +25,7 @@
 
 # To decode JWT
     npm install jwt-decode
+
+
+# to use map feature 
+    npm install leaflet
