@@ -34,6 +34,7 @@ const bookingRoutes = require('./src/routes/bookingRoutes');
 const routeRoutes = require('./src/routes/routeRoutes');
 const feedbackRoutes = require("./src/routes/feedbackRoutes");
 const chatbotRoutes = require("./src/routes/chatbot");
+const seatRoutes = require("./src/routes/seatRoutes");
 
 console.log("✅ Auth routes mounted at /api/auth");
 
@@ -44,6 +45,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/routes', routeRoutes);
 app.use("/api/feedbacks", feedbackRoutes);
 app.use('/api/chatbot', chatbotRoutes);
+app.use('/api/seats', seatRoutes);
 
 // Test endpoint for manual reminder
 app.post("/api/test-reminder/:bookingId", async (req, res) => {

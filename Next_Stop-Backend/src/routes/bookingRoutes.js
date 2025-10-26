@@ -10,6 +10,6 @@ const {
 // Protected routes
 router.post("/", authBooking, bookTicket);           // Book a ticket
 router.put("/cancel/:id", authBooking, cancelBooking); // Cancel a booking
-router.get("/user", authBooking, getUserBookings);     // Get all bookings for logged-in user
+router.get("/my-bookings", authBooking, getUserBookings);     // Get all bookings for logged-in user
 
 module.exports = router;

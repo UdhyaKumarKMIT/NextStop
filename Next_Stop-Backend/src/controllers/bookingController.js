@@ -16,84 +16,97 @@ const bookTicket = async (req, res) => {
       totalFare 
     } = req.body;
     
-    const username = req.user.username; // from JWT middleware
+    const username = req.user.username;
 
     // Validate required fields
     if (!busNumber || !routeId || !seatNumbers || !journeyDate || !boardingPoint || !passengerDetails) {
       return res.status(400).json({ 
+        success: false,
         message: "Missing required booking details" 
       });
     }
 
-    // Normalize seat numbers for format like "1-1", "1-2"
+    // Normalize seat numbers
     let selectedSeats = [];
     if (typeof seatNumbers === "string") {
-      // Handle both comma-separated and array-like strings
       if (seatNumbers.includes(",")) {
         selectedSeats = seatNumbers.split(",").map(s => s.trim());
       } else if (seatNumbers.startsWith("[") && seatNumbers.endsWith("]")) {
-        // Handle array string like "[1-1,1-2]"
         const cleanString = seatNumbers.replace(/[\[\]]/g, '');
         selectedSeats = cleanString.split(",").map(s => s.trim().replace(/"/g, ''));
       } else {
-        // Single seat
         selectedSeats = [seatNumbers.trim()];
       }
     } else if (Array.isArray(seatNumbers)) {
       selectedSeats = seatNumbers.map(s => s.toString().trim());
     } else {
-      return res.status(400).json({ message: "Invalid seatNumbers format" });
+      return res.status(400).json({ 
+        success: false,
+        message: "Invalid seatNumbers format" 
+      });
     }
 
-    console.log("Processed seats:", selectedSeats);
-    console.log("Passenger details:", passengerDetails);
+    console.log("Processing booking for seats:", selectedSeats);
 
     // Validate passenger details match selected seats
     if (passengerDetails.length !== selectedSeats.length) {
       return res.status(400).json({ 
+        success: false,
         message: "Passenger details count must match selected seats count" 
       });
     }
 
     // Fetch bus and route
     const bus = await Bus.findOne({ busNumber });
-    if (!bus) return res.status(404).json({ message: "Bus not found" });
+    if (!bus) return res.status(404).json({ 
+      success: false,
+      message: "Bus not found" 
+    });
 
     const route = await Route.findOne({ routeId });
-    if (!route) return res.status(404).json({ message: "Route not found" });
+    if (!route) return res.status(404).json({ 
+      success: false,
+      message: "Route not found" 
+    });
 
     // Get seat data for that date
-    const seatData = await Seat.findOne({ busNumber, date: journeyDate });
+    const seatData = await Seat.findOne({ busNumber, date: new Date(journeyDate) });
     if (!seatData) {
       return res.status(404).json({ 
+        success: false,
         message: "Seat data not found for this date. Please check bus schedule." 
       });
     }
 
+    console.log("Available seats:", seatData.seats);
+    console.log("Booked seats:", seatData.bookedSeats.map(bs => bs.seatNumber));
+
     // Check seat availability
-    const unavailableSeats = selectedSeats.filter(s => !seatData.seats.includes(s));
+    const bookedSeatNumbers = seatData.bookedSeats.map(bs => bs.seatNumber);
+    const unavailableSeats = [];
+
+    selectedSeats.forEach(seat => {
+      if (!seatData.seats.includes(seat) || bookedSeatNumbers.includes(seat)) {
+        unavailableSeats.push(seat);
+      }
+    });
+
     if (unavailableSeats.length > 0) {
       return res.status(400).json({ 
+        success: false,
         message: `Seats ${unavailableSeats.join(", ")} are not available` 
       });
     }
 
-    // Update seat availability - remove booked seats
-    seatData.seats = seatData.seats.filter(s => !selectedSeats.includes(s));
-    seatData.availableSeats -= selectedSeats.length;
-    
-    // Add booked seats to bookedSeats array for tracking
-    if (!seatData.bookedSeats) {
-      seatData.bookedSeats = [];
+    // Verify we have enough available seats
+    if (seatData.availableSeats < selectedSeats.length) {
+      return res.status(400).json({ 
+        success: false,
+        message: `Only ${seatData.availableSeats} seats available, but trying to book ${selectedSeats.length}` 
+      });
     }
-    seatData.bookedSeats.push(...selectedSeats.map(seat => ({
-      seatNumber: seat,
-      bookingId: null // Will be updated after booking creation
-    })));
-    
-    await seatData.save();
 
-    // Create booking with passenger details
+    // Create booking first
     const newBooking = new Booking({
       username: username,
       busNumber: busNumber,
@@ -112,44 +125,70 @@ const bookTicket = async (req, res) => {
       boardingPoint: boardingPoint,
       bookingStatus: "Confirmed",
     });
-
-    console.log("Final booking object:", newBooking);
     
     const savedBooking = await newBooking.save();
     console.log("Booking saved successfully with ID:", savedBooking._id);
 
-    // Update seat data with booking reference
-    seatData.bookedSeats = seatData.bookedSeats.map(bookedSeat => {
-      if (selectedSeats.includes(bookedSeat.seatNumber)) {
-        return {
-          ...bookedSeat,
-          bookingId: savedBooking._id,
-          passengerName: passengerDetails.find(p => p.seatNumber === bookedSeat.seatNumber)?.name
-        };
-      }
-      return bookedSeat;
-    });
-  
+    // Update seat availability after successful booking
+    seatData.seats = seatData.seats.filter(s => !selectedSeats.includes(s));
+    seatData.availableSeats -= selectedSeats.length;
+    
+    // Add booked seats to bookedSeats array
+    const newBookedSeats = selectedSeats.map((seat, index) => ({
+      seatNumber: seat,
+      bookingId: savedBooking._id,
+      passengerName: passengerDetails[index]?.name || `Passenger_${seat}`
+    }));
+    
+    // Remove any existing entries for these seats and add new ones
+    seatData.bookedSeats = seatData.bookedSeats.filter(
+      bs => !selectedSeats.includes(bs.seatNumber)
+    );
+    seatData.bookedSeats.push(...newBookedSeats);
+    
     await seatData.save();
 
     res.status(201).json({
+      success: true,
       message: "Booking successful",
       booking: savedBooking,
     });
   } catch (err) {
     console.error("Booking Error:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    res.status(500).json({ 
+      success: false,
+      message: "Server error", 
+      error: err.message 
+    });
   }
 };
 
 // ---------------- CANCEL BOOKING ----------------
 const cancelBooking = async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id);
-    if (!booking) return res.status(404).json({ message: "Booking not found" });
+    const bookingId = req.params.id;
+    const booking = await Booking.findById(bookingId);
+    
+    if (!booking) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Booking not found" 
+      });
+    }
 
-    if (booking.username !== req.user.username)
-      return res.status(403).json({ message: "Not authorized to cancel this booking" });
+    if (booking.username !== req.user.username) {
+      return res.status(403).json({ 
+        success: false,
+        message: "Not authorized to cancel this booking" 
+      });
+    }
+
+    if (booking.bookingStatus === "Cancelled") {
+      return res.status(400).json({ 
+        success: false,
+        message: "Booking is already cancelled" 
+      });
+    }
 
     const seatData = await Seat.findOne({ 
       busNumber: booking.busNumber, 
@@ -184,10 +223,18 @@ const cancelBooking = async (req, res) => {
     booking.bookingStatus = "Cancelled";
     await booking.save();
 
-    res.json({ message: "Booking cancelled successfully", booking });
+    res.json({ 
+      success: true,
+      message: "Booking cancelled successfully", 
+      booking 
+    });
   } catch (err) {
     console.error("Cancel Error:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    res.status(500).json({ 
+      success: false,
+      message: "Server error", 
+      error: err.message 
+    });
   }
 };
 
@@ -196,10 +243,18 @@ const getUserBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({ username: req.user.username })
       .sort({ createdAt: -1 });
-    res.json({ bookings });
+    
+    res.json({ 
+      success: true,
+      bookings 
+    });
   } catch (err) {
     console.error("Get Bookings Error:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    res.status(500).json({ 
+      success: false,
+      message: "Server error", 
+      error: err.message 
+    });
   }
 };
 

@@ -32,3 +32,6 @@
 
 # For chatbot, we used GEMINI
     npm install @google/generative-ai
+
+# for schedulinng
+    npm install node-cron

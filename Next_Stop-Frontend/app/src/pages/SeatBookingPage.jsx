@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { FaChair } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
 import Navbar from "../components/Navbar";
+
+const API_BASE_URL = "http://localhost:5050/api";
 
 const SeatBookingPage = () => {
   const navigate = useNavigate();
@@ -11,6 +14,7 @@ const SeatBookingPage = () => {
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [bookedSeats, setBookedSeats] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [seatData, setSeatData] = useState(null);
 
   // Seat layout configuration
   const rows = 10;
@@ -21,24 +25,60 @@ const SeatBookingPage = () => {
       return;
     }
 
-    // Extract booked seats from bus.seatInfo
-    if (bus.seatInfo && bus.seatInfo.seats) {
-      const booked = bus.seatInfo.seats
-        .filter(seat => !seat.isAvailable)
-        .map(seat => `${seat.row}-${seat.column}`);
-      setBookedSeats(booked);
-    }
-    
-    setLoading(false);
-  }, [bus, navigate]);
+    // Fetch seat availability from backend
+    const fetchSeatAvailability = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`${API_BASE_URL}/seats/availability`, {
+          params: {
+            busNumber: bus.busNumber,
+            date: journeyDate
+          }
+        });
+
+        if (response.data.success) {
+          const seatInfo = response.data.data;
+          setSeatData(seatInfo);
+          
+          // Extract booked seats from the bookedSeats array
+          const booked = seatInfo.bookedSeats.map(bookedSeat => bookedSeat.seatNumber);
+          setBookedSeats(booked);
+          console.log("Booked seats:", booked);
+          console.log("Available seats:", seatInfo.seats);
+        } else {
+          console.error("Failed to fetch seat data");
+          // Fallback to any available data from bus object
+          if (bus.seatInfo && bus.seatInfo.bookedSeats) {
+            const booked = bus.seatInfo.bookedSeats.map(bookedSeat => bookedSeat.seatNumber);
+            setBookedSeats(booked);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching seat data:", error);
+        // Fallback to any available data
+        if (bus.seatInfo && bus.seatInfo.bookedSeats) {
+          const booked = bus.seatInfo.bookedSeats.map(bookedSeat => bookedSeat.seatNumber);
+          setBookedSeats(booked);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSeatAvailability();
+  }, [bus, journeyDate, navigate]);
 
   const handleSeatClick = (seatId) => {
-    if (bookedSeats.includes(seatId)) return;
+    // Prevent selecting already booked seats
+    if (bookedSeats.includes(seatId)) {
+      alert(`Seat ${seatId} is already booked!`);
+      return;
+    }
 
     if (selectedSeats.includes(seatId)) {
       setSelectedSeats(selectedSeats.filter((s) => s !== seatId));
     } else {
-      // Check if seat limit reached (you can set a max limit)
+      // Check if seat limit reached
       if (selectedSeats.length >= 6) {
         alert("You can select maximum 6 seats at a time");
         return;
@@ -47,25 +87,32 @@ const SeatBookingPage = () => {
     }
   };
 
-  
-  const finalizeBooking = () => {
+  const finalizeBooking = async () => {
     if (selectedSeats.length === 0) {
       alert("Please select at least one seat");
       return;
     }
 
-    // Calculate total price
-    const seatPrice = bus.seatInfo?.price || 0;
-    const totalPrice = seatPrice * selectedSeats.length;
+    // Double-check if any selected seats are already booked
+    const alreadyBooked = selectedSeats.filter(seat => bookedSeats.includes(seat));
+    if (alreadyBooked.length > 0) {
+      alert(`Seats ${alreadyBooked.join(", ")} are no longer available. Please select different seats.`);
+      setSelectedSeats(selectedSeats.filter(seat => !alreadyBooked.includes(seat)));
+      return;
+    }
 
     // Navigate to payment page with all necessary data
+    const seatPrice = seatData?.price || bus.seatInfo?.price || 0;
+    const totalPrice = seatPrice * selectedSeats.length;
+
     navigate("/payment", {
       state: {
         bus: bus,
         journeyDate: journeyDate,
         selectedSeats: selectedSeats,
         totalPrice: totalPrice,
-        seatPrice: seatPrice
+        seatPrice: seatPrice,
+        seatData: seatData
       }
     });
   };
@@ -79,7 +126,7 @@ const SeatBookingPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-red-50 flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
+        <div className="text-xl">Loading seat availability...</div>
       </div>
     );
   }
@@ -116,10 +163,13 @@ const SeatBookingPage = () => {
                 <strong>Date:</strong> {new Date(journeyDate).toLocaleDateString()}
               </p>
               <p className="text-gray-600">
-                <strong>Price:</strong> ₹{bus.seatInfo?.price || "N/A"} per seat
+                <strong>Price:</strong> ₹{seatData?.price || bus.seatInfo?.price || "N/A"} per seat
               </p>
               <p className="text-gray-600">
-                <strong>Available Seats:</strong> {bus.seatInfo?.availableSeats || 0}
+                <strong>Available Seats:</strong> {seatData?.availableSeats || bus.seatInfo?.availableSeats || 0}
+              </p>
+              <p className="text-gray-600">
+                <strong>Total Seats:</strong> {seatData?.totalSeats || 40}
               </p>
             </div>
           </div>
@@ -128,7 +178,7 @@ const SeatBookingPage = () => {
         {/* Bus Layout */}
         <div className="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg mb-8">
           {/* Legend */}
-          <div className="flex justify-center gap-6 mb-8">
+          <div className="flex justify-center gap-6 mb-8 flex-wrap">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 bg-gray-300 rounded"></div>
               <span>Available</span>
@@ -156,8 +206,8 @@ const SeatBookingPage = () => {
               <div key={rowIndex} className="flex justify-center gap-8">
                 {/* Left side (2 seats) */}
                 <div className="flex gap-4">
-                  {[...Array(2)].map((_, colIndex) => {
-                    const seatId = `${rowIndex + 1}-${colIndex + 1}`;
+                  {[1, 2].map((colIndex) => {
+                    const seatId = `${rowIndex + 1}-${colIndex}`;
                     const status = getSeatStatus(seatId);
 
                     return (
@@ -166,14 +216,14 @@ const SeatBookingPage = () => {
                         onClick={() => handleSeatClick(seatId)}
                         className={`flex flex-col items-center justify-center w-14 h-14 rounded-lg cursor-pointer transition-all duration-200 ${
                           status === "booked"
-                            ? "bg-red-600 cursor-not-allowed"
+                            ? "bg-red-600 cursor-not-allowed text-white"
                             : status === "selected"
                             ? "bg-green-500 text-white"
                             : "bg-gray-300 hover:bg-gray-400 hover:scale-105"
                         }`}
                       >
                         <FaChair className="text-lg" />
-                        <span className="text-xs mt-1">{rowIndex + 1}-{colIndex + 1}</span>
+                        <span className="text-xs mt-1">{seatId}</span>
                       </div>
                     );
                   })}
@@ -186,8 +236,8 @@ const SeatBookingPage = () => {
 
                 {/* Right side (2 seats) */}
                 <div className="flex gap-4">
-                  {[...Array(2)].map((_, colIndex) => {
-                    const seatId = `${rowIndex + 1}-${colIndex + 3}`;
+                  {[3, 4].map((colIndex) => {
+                    const seatId = `${rowIndex + 1}-${colIndex}`;
                     const status = getSeatStatus(seatId);
 
                     return (
@@ -196,14 +246,14 @@ const SeatBookingPage = () => {
                         onClick={() => handleSeatClick(seatId)}
                         className={`flex flex-col items-center justify-center w-14 h-14 rounded-lg cursor-pointer transition-all duration-200 ${
                           status === "booked"
-                            ? "bg-red-600 cursor-not-allowed"
+                            ? "bg-red-600 cursor-not-allowed text-white"
                             : status === "selected"
                             ? "bg-green-500 text-white"
                             : "bg-gray-300 hover:bg-gray-400 hover:scale-105"
                         }`}
                       >
                         <FaChair className="text-lg" />
-                        <span className="text-xs mt-1">{rowIndex + 1}-{colIndex + 3}</span>
+                        <span className="text-xs mt-1">{seatId}</span>
                       </div>
                     );
                   })}
@@ -226,7 +276,7 @@ const SeatBookingPage = () => {
                 </p>
               )}
               <p className="text-xl font-bold text-green-600 mt-2">
-                Total: ₹{(bus.seatInfo?.price || 0) * selectedSeats.length}
+                Total: ₹{(seatData?.price || bus.seatInfo?.price || 0) * selectedSeats.length}
               </p>
             </div>
 
