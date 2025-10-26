@@ -26,10 +26,11 @@ const getRouteById = async (req, res) => {
   try {
     const trimmedRouteId = req.params.routeId.trim();
     console.log("Fetching route:", trimmedRouteId);
-    const route = await Route.findOne(
-      { routeId: { $regex: `^${trimmedRouteId}$`, $options: "i" } }, // ✅ case-insensitive match
     
-    );
+    const route = await Route.findOne({
+      routeId: { $regex: `^${trimmedRouteId}$`, $options: "i" } // ✅ case-insensitive match
+    });
+    
     if (!route) return res.status(404).json({ message: "Route not found" });
 
     res.json({ route });
@@ -67,9 +68,9 @@ const deleteRoute = async (req, res) => {
     const trimmedRouteId = req.params.routeId.trim();
     console.log("Deleting route:", trimmedRouteId);
 
-    const route = await Route.findOneAndDelete(
-      { routeId: { $regex: `^${trimmedRouteId}$`, $options: "i" } }, // ✅ case-insensitive match
-    );
+    const route = await Route.findOneAndDelete({
+      routeId: { $regex: `^${trimmedRouteId}$`, $options: "i" } // ✅ case-insensitive match
+    });
     
     if (!route) return res.status(404).json({ message: "Route not found" });
 

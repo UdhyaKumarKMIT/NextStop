@@ -28,6 +28,7 @@ const ProfilePage = () => {
   const [editProfile, setEditProfile] = useState({ ...profile });
   const [currentBookings, setCurrentBookings] = useState([]);
   const [pastBookings, setPastBookings] = useState([]);
+  const [routeInfo, setRouteInfo] = useState({}); // Store route information
 
   // ✅ Fetch user info after login
   useEffect(() => {
@@ -60,44 +61,81 @@ const ProfilePage = () => {
 
   // ✅ Fetch bookings when bookings tab is active
   useEffect(() => {
-    const fetchBookings = async () => {
-      if (activeTab === "current" || activeTab === "past") {
+    // In the fetchBookings useEffect, add more logging:
+const fetchBookings = async () => {
+  if (activeTab === "current" || activeTab === "past") {
+    try {
+      setBookingsLoading(true);
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      console.log("Fetching bookings...");
+      const response = await axios.get(`${API_BASE_URL}/bookings/my-bookings`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const allBookings = response.data.bookings || [];
+      console.log("All bookings:", allBookings);
+
+      // Fetch route information for each booking
+      const routePromises = allBookings.map(async (booking) => {
         try {
-          setBookingsLoading(true);
-          const token = localStorage.getItem("token");
-          if (!token) return;
-
-          const response = await axios.get(`${API_BASE_URL}/bookings/my-bookings`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-
-          const allBookings = response.data.bookings || [];
+          console.log(`Fetching route for routeId: ${booking.routeId}`);
+          const routeResponse = await axios.get(`${API_BASE_URL}/routes/${booking.routeId}`);
+          console.log(`Route response for ${booking.routeId}:`, routeResponse.data);
           
-          // Separate current and past bookings
-          const now = new Date();
-          const current = [];
-          const past = [];
-
-          allBookings.forEach(booking => {
-            const journeyDate = new Date(booking.journeyDate);
-            if (journeyDate >= now && booking.bookingStatus === "Confirmed") {
-              current.push(booking);
-            } else {
-              past.push(booking);
-            }
-          });
-
-          setCurrentBookings(current);
-          setPastBookings(past);
-
-        } catch (err) {
-          console.error("Failed to fetch bookings:", err);
-          setMessage({ type: 'error', text: 'Failed to load bookings' });
-        } finally {
-          setBookingsLoading(false);
+          return { 
+            routeId: booking.routeId, 
+            destination: routeResponse.data.route?.destination || 'Unknown',
+            source: routeResponse.data.route?.source || 'Unknown'
+          };
+        } catch (error) {
+          console.error(`Failed to fetch route for ${booking.routeId}:`, error.response?.data || error.message);
+          return { 
+            routeId: booking.routeId, 
+            destination: 'Unknown Destination',
+            source: 'Unknown'
+          };
         }
-      }
-    };
+      });
+
+      const routesData = await Promise.all(routePromises);
+      console.log("Routes data:", routesData);
+      
+      const routeMap = {};
+      routesData.forEach(route => {
+        routeMap[route.routeId] = {
+          destination: route.destination,
+          source: route.source
+        };
+      });
+      setRouteInfo(routeMap);
+
+      // Separate current and past bookings
+      const now = new Date();
+      const current = [];
+      const past = [];
+
+      allBookings.forEach(booking => {
+        const journeyDate = new Date(booking.journeyDate);
+        if (journeyDate >= now && booking.bookingStatus === "Confirmed") {
+          current.push(booking);
+        } else {
+          past.push(booking);
+        }
+      });
+
+      setCurrentBookings(current);
+      setPastBookings(past);
+
+    } catch (err) {
+      console.error("Failed to fetch bookings:", err);
+      setMessage({ type: 'error', text: 'Failed to load bookings' });
+    } finally {
+      setBookingsLoading(false);
+    }
+  }
+};
 
     fetchBookings();
   }, [activeTab]);
@@ -182,6 +220,30 @@ const ProfilePage = () => {
     }
   };
 
+  // ✅ Know Your Destination function
+  const handleKnowDestination = (destination) => {
+    // Format destination for URL (convert to lowercase, replace spaces with hyphens)
+    const formattedDestination = destination
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '');
+    
+    // Open destination info in new tab
+    const destinationURL = `https://${formattedDestination}.nic.in`;
+    
+    // First try the .nic.in domain
+    const newWindow = window.open(destinationURL, '_blank');
+    
+    // If .nic.in doesn't work, try alternative sources
+    setTimeout(() => {
+      if (newWindow.closed || !newWindow.location.href) {
+        // Alternative: Wikipedia
+        const wikiURL = `https://en.wikipedia.org/wiki/${formattedDestination.replace(/-/g, '_')}`;
+        window.open(wikiURL, '_blank');
+      }
+    }, 1000);
+  };
+
   // ✅ Logout function
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to logout?")) {
@@ -189,15 +251,8 @@ const ProfilePage = () => {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       
-      // Clear any other stored data if needed
-      // localStorage.removeItem("refreshToken");
-      
       // Redirect to login page
       navigate("/login");
-      
-      // Optional: Show logout message on login page
-      // You can pass state if needed
-      // navigate("/login", { state: { message: "Logged out successfully" } });
     }
   };
 
@@ -220,6 +275,11 @@ const ProfilePage = () => {
       hour: '2-digit', 
       minute: '2-digit' 
     });
+  };
+
+  // Get destination name from route info
+  const getDestination = (routeId) => {
+    return routeInfo[routeId]?.destination || 'Destination';
   };
 
   if (loading) {
@@ -460,63 +520,89 @@ const ProfilePage = () => {
                 </div>
               ) : currentBookings.length > 0 ? (
                 <div className="space-y-4">
-                  {currentBookings.map((booking) => (
-                    <div key={booking._id} className="border border-green-200 rounded-lg p-6 bg-green-50 hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-lg text-gray-800">{booking.busNumber}</h3>
-                          <div className="grid grid-cols-2 gap-4 mt-2">
-                            <div>
-                              <p className="text-gray-600">
-                                <span className="font-medium">Date:</span> {formatDate(booking.journeyDate)}
-                              </p>
-                              <p className="text-gray-600">
-                                <span className="font-medium">Time:</span> {formatTime(booking.journeyDate)}
-                              </p>
-                              <p className="text-gray-600">
-                                <span className="font-medium">Seats:</span> {booking.seatNumbers.join(', ')}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-gray-600">
-                                <span className="font-medium">Boarding:</span> {booking.boardingPoint}
-                              </p>
-                              <p className="text-gray-600">
-                                <span className="font-medium">Passengers:</span> {booking.totalSeats}
-                              </p>
+                  {currentBookings.map((booking) => {
+                    const destination = getDestination(booking.routeId);
+                    return (
+                      <div key={booking._id} className="border border-green-200 rounded-lg p-6 bg-green-50 hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg text-gray-800">{booking.busNumber}</h3>
+                            <div className="grid grid-cols-2 gap-4 mt-2">
+                              <div>
+                                <p className="text-gray-600">
+                                  <span className="font-medium">Date:</span> {formatDate(booking.journeyDate)}
+                                </p>
+                                <p className="text-gray-600">
+                                  <span className="font-medium">Time:</span> {formatTime(booking.journeyDate)}
+                                </p>
+                                <p className="text-gray-600">
+                                  <span className="font-medium">Seats:</span> {booking.seatNumbers.join(', ')}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-600">
+                                  <span className="font-medium">Boarding:</span> {booking.boardingPoint}
+                                </p>
+                                <p className="text-gray-600">
+                                  <span className="font-medium">Destination:</span> {destination}
+                                </p>
+                                <p className="text-gray-600">
+                                  <span className="font-medium">Passengers:</span> {booking.totalSeats}
+                                </p>
+                              </div>
                             </div>
                           </div>
+                          <div className="text-right">
+                            <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                              {booking.bookingStatus}
+                            </span>
+                            <p className="text-xl font-bold text-red-600 mt-2">₹{booking.totalFare}</p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                            {booking.bookingStatus}
-                          </span>
-                          <p className="text-xl font-bold text-red-600 mt-2">₹{booking.totalFare}</p>
+                        
+                        {/* Passenger Details */}
+                        <div className="mt-4 border-t pt-4">
+                          <h4 className="font-medium text-gray-700 mb-2">Passenger Details:</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {booking.passengerDetails.map((passenger, index) => (
+                              <div key={index} className="text-sm text-gray-600">
+                                {passenger.name} ({passenger.age} yrs, {passenger.gender}) - Seat {passenger.seatNumber}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                      
-                      {/* Passenger Details */}
-                      <div className="mt-4 border-t pt-4">
-                        <h4 className="font-medium text-gray-700 mb-2">Passenger Details:</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {booking.passengerDetails.map((passenger, index) => (
-                            <div key={index} className="text-sm text-gray-600">
-                              {passenger.name} ({passenger.age} yrs, {passenger.gender}) - Seat {passenger.seatNumber}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
 
-                      <div className="mt-4 flex gap-3">
-                        <button 
-                          onClick={() => handleCancelBooking(booking._id)}
-                          className="text-red-600 hover:text-red-800 text-sm font-medium border border-red-600 px-3 py-1 rounded hover:bg-red-50 transition-colors"
-                        >
-                          Cancel Booking
-                        </button>
+                        <div className="mt-4 flex gap-3">
+                          <button 
+                            onClick={() => handleCancelBooking(booking._id)}
+                            className="text-red-600 hover:text-red-800 text-sm font-medium border border-red-600 px-3 py-1 rounded hover:bg-red-50 transition-colors"
+                          >
+                            Cancel Booking
+                          </button>
+                          <button 
+                            onClick={() => handleKnowDestination(destination)}
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium border border-blue-600 px-3 py-1 rounded hover:bg-blue-50 transition-colors flex items-center gap-1"
+                          >
+                            <svg 
+                              className="w-4 h-4" 
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24" 
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                strokeWidth={2} 
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                              />
+                            </svg>
+                            Know Your Destination
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8">
@@ -542,64 +628,90 @@ const ProfilePage = () => {
                 </div>
               ) : pastBookings.length > 0 ? (
                 <div className="space-y-4">
-                  {pastBookings.map((booking) => (
-                    <div key={booking._id} className="border border-gray-200 rounded-lg p-6 bg-gray-50">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-lg text-gray-800">{booking.busNumber}</h3>
-                          <div className="grid grid-cols-2 gap-4 mt-2">
-                            <div>
-                              <p className="text-gray-600">
-                                <span className="font-medium">Date:</span> {formatDate(booking.journeyDate)}
-                              </p>
-                              <p className="text-gray-600">
-                                <span className="font-medium">Time:</span> {formatTime(booking.journeyDate)}
-                              </p>
-                              <p className="text-gray-600">
-                                <span className="font-medium">Seats:</span> {booking.seatNumbers.join(', ')}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-gray-600">
-                                <span className="font-medium">Boarding:</span> {booking.boardingPoint}
-                              </p>
-                              <p className="text-gray-600">
-                                <span className="font-medium">Status:</span> {booking.bookingStatus}
-                              </p>
+                  {pastBookings.map((booking) => {
+                    const destination = getDestination(booking.routeId);
+                    return (
+                      <div key={booking._id} className="border border-gray-200 rounded-lg p-6 bg-gray-50">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg text-gray-800">{booking.busNumber}</h3>
+                            <div className="grid grid-cols-2 gap-4 mt-2">
+                              <div>
+                                <p className="text-gray-600">
+                                  <span className="font-medium">Date:</span> {formatDate(booking.journeyDate)}
+                                </p>
+                                <p className="text-gray-600">
+                                  <span className="font-medium">Time:</span> {formatTime(booking.journeyDate)}
+                                </p>
+                                <p className="text-gray-600">
+                                  <span className="font-medium">Seats:</span> {booking.seatNumbers.join(', ')}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-600">
+                                  <span className="font-medium">Boarding:</span> {booking.boardingPoint}
+                                </p>
+                                <p className="text-gray-600">
+                                  <span className="font-medium">Destination:</span> {destination}
+                                </p>
+                                <p className="text-gray-600">
+                                  <span className="font-medium">Status:</span> {booking.bookingStatus}
+                                </p>
+                              </div>
                             </div>
                           </div>
+                          <div className="text-right">
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                              booking.bookingStatus === 'Cancelled' 
+                                ? 'bg-red-100 text-red-800' 
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {booking.bookingStatus}
+                            </span>
+                            <p className="text-xl font-bold text-gray-600 mt-2">₹{booking.totalFare}</p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            booking.bookingStatus === 'Cancelled' 
-                              ? 'bg-red-100 text-red-800' 
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {booking.bookingStatus}
-                          </span>
-                          <p className="text-xl font-bold text-gray-600 mt-2">₹{booking.totalFare}</p>
+                        
+                        {/* Passenger Details */}
+                        <div className="mt-4 border-t pt-4">
+                          <h4 className="font-medium text-gray-700 mb-2">Passenger Details:</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {booking.passengerDetails.map((passenger, index) => (
+                              <div key={index} className="text-sm text-gray-600">
+                                {passenger.name} ({passenger.age} yrs, {passenger.gender}) - Seat {passenger.seatNumber}
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                      
-                      {/* Passenger Details */}
-                      <div className="mt-4 border-t pt-4">
-                        <h4 className="font-medium text-gray-700 mb-2">Passenger Details:</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {booking.passengerDetails.map((passenger, index) => (
-                            <div key={index} className="text-sm text-gray-600">
-                              {passenger.name} ({passenger.age} yrs, {passenger.gender}) - Seat {passenger.seatNumber}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
 
-                      <div className="mt-4">
-                        <button className="text-red-600 hover:text-red-800 text-sm font-medium border border-red-600 px-3 py-1 rounded hover:bg-red-50 transition-colors">
-                          View Details
-                        </button>
+                        <div className="mt-4 flex gap-3">
+                          <button 
+                            onClick={() => handleKnowDestination(destination)}
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium border border-blue-600 px-3 py-1 rounded hover:bg-blue-50 transition-colors flex items-center gap-1"
+                          >
+                            <svg 
+                              className="w-4 h-4" 
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24" 
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                strokeWidth={2} 
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                              />
+                            </svg>
+                            Know Your Destination
+                          </button>
+                          <button className="text-red-600 hover:text-red-800 text-sm font-medium border border-red-600 px-3 py-1 rounded hover:bg-red-50 transition-colors">
+                            View Details
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8">
