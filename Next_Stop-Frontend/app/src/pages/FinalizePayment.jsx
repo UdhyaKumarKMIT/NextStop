@@ -1,11 +1,45 @@
 import React from "react";
+
+import { useState,useEffect} from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import emailjs from "emailjs-com";
 import Navbar from "../components/Navbar";
+import axios from "axios";
+
+const API_BASE_URL = "http://localhost:5050/api";
 
 const FinalizePayment = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const user=null;
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+       
+          return;
+        }
+
+        const res = await axios.get(`${API_BASE_URL}/auth/getUserProfile`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        user = res.data.user;
+          
+        
+      
+
+      } catch (err) {
+        console.error("Failed to fetch user:", err);
+       
+      } finally {
+        
+      }
+    };
+
+    fetchProfile();
+  }, []);
 
   // Get all data passed from PaymentPage
   const {
@@ -48,66 +82,118 @@ const FinalizePayment = () => {
   const qrData = encodeURIComponent(JSON.stringify(ticketData));
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrData}`;
 
-  const handlePayment = () => {
-    // Prepare email content
-    const passengerList = passengerDetails
-      .map((p, index) => 
-        `${p.name} (Seat: ${selectedSeats[index]}, Age: ${p.age}, Gender: ${p.gender}, Phone: ${p.phone})`
-      )
-      .join("\n");
+  const handlePayment = async () => {
+    try {
+      // First, create the booking in the database
+      const bookingData = {
+       
+        busNumber: bus.busNumber,
+        routeId: bus.route?.routeId,
+        seatNumbers: selectedSeats,
+        journeyDate: journeyDate,
+        boardingPoint: bus.route?.source, // or make this dynamic based on user selection
+        totalFare: finalAmount,
+        passengerDetails: passengerDetails.map((passenger, index) => ({
+          seatNumber: selectedSeats[index],
+          name: passenger.name,
+          age: passenger.age,
+          gender: passenger.gender,
+          phone: passenger.phone
+        }))
+      };
 
-    const templateParams = {
-      to_name: passengerDetails[0]?.name || "Passenger",
-      to_email: "malarvannanm11@gmail.com", // You can make this dynamic
-      bus_name: bus.busName,
-      bus_type: bus.type,
-      bus_number: bus.busNumber,
-      from: bus.route?.source,
-      to: bus.route?.destination,
-      date: new Date(journeyDate).toLocaleDateString(),
-      seats: selectedSeats.join(", "),
-      passengers: passengerList,
-      ticket_id: ticketId,
-      total_amount: totalPrice,
-      discount: discount,
-      final_amount: finalAmount,
-      operator1: `${bus.operatorName1} - ${bus.operatorPhone1}`,
-      operator2: bus.operatorName2 ? `${bus.operatorName2} - ${bus.operatorPhone2}` : "N/A",
-      qr_code_url: qrUrl
-    };
+      console.log("Sending booking data:", bookingData);
 
-    // Send email using EmailJS
-    emailjs
-      .send(
-        "service_iv6fxwn",   // EmailJS service ID
-        "template_zfztbyl",  // EmailJS template ID
-        templateParams,
-        "bQLV-wFxJ_cfNWDs3"    // EmailJS public key
-      )
-      .then(() => {
-        console.log("Ticket email sent successfully!");
-        // Navigate to ticket page after successful email
-        navigate("/ticket", { 
-          state: { 
-            ...ticketData, 
-            qrUrl,
-            emailSent: true
-          } 
-        });
-      })
-      .catch((err) => {
-        console.log("Email sending failed:", err);
-        // Still navigate to ticket page but with error flag
-        navigate("/ticket", { 
-          state: { 
-            ...ticketData, 
-            qrUrl,
-            emailSent: false,
-            emailError: err.message
-          } 
-        });
-      });
+      // Make API call to create booking
+      const token = localStorage.getItem("token");
+      const bookingResponse = await axios.post(
+        "http://localhost:5050/api/bookings",
+        bookingData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+
+      console.log("Booking API response:", bookingResponse.data);
+
+      if (bookingResponse.data.message === "Booking successful") {
+        const booking = bookingResponse.data.booking;
+        
+        // Prepare email content
+        const passengerList = passengerDetails
+          .map((p, index) => 
+            `${p.name} (Seat: ${selectedSeats[index]}, Age: ${p.age}, Gender: ${p.gender}, Phone: ${p.phone})`
+          )
+          .join("\n");
+
+        const templateParams = {
+          to_name: passengerDetails[0]?.name || "Passenger",
+          to_email: "malarvannanm11@gmail.com",
+          bus_name: bus.busName,
+          bus_type: bus.type,
+          bus_number: bus.busNumber,
+          from: bus.route?.source,
+          to: bus.route?.destination,
+          date: new Date(journeyDate).toLocaleDateString(),
+          seats: selectedSeats.join(", "),
+          passengers: passengerList,
+          ticket_id: ticketId,
+          total_amount: totalPrice,
+          discount: discount,
+          final_amount: finalAmount,
+          operator1: `${bus.operatorName1} - ${bus.operatorPhone1}`,
+          operator2: bus.operatorName2 ? `${bus.operatorName2} - ${bus.operatorPhone2}` : "N/A",
+          qr_code_url: qrUrl,
+          booking_id: booking._id // Include booking ID in email
+        };
+
+        // Send email using EmailJS
+        emailjs
+          .send(
+            "service_iv6fxwn",   // EmailJS service ID
+            "template_zfztbyl",  // EmailJS template ID
+            templateParams,
+            "bQLV-wFxJ_cfNWDs3"    // EmailJS public key
+          )
+          .then(() => {
+            console.log("Ticket email sent successfully!");
+            // Navigate to ticket page after successful email
+            navigate("/ticket", { 
+              state: { 
+                ...ticketData, 
+                qrUrl,
+                emailSent: true,
+                booking: booking // Include booking data in navigation
+              } 
+            });
+          })
+          .catch((err) => {
+            console.log("Email sending failed:", err);
+            // Still navigate to ticket page but with error flag
+            navigate("/ticket", { 
+              state: { 
+                ...ticketData, 
+                qrUrl,
+                emailSent: false,
+                emailError: err.message,
+                booking: booking // Include booking data even if email fails
+              } 
+            });
+          });
+      } else {
+        throw new Error(bookingResponse.data.message || "Booking failed");
+      }
+    } catch (error) {
+      console.error("Payment processing error:", error);
+      alert(`Booking failed: ${error.response?.data?.message || error.message}`);
+    }
   };
+
+  // If no booking data found
+  
 
   // If no booking data found
   if (!bus.busName || selectedSeats.length === 0) {

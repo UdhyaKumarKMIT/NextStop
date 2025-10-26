@@ -1,17 +1,18 @@
 const mongoose = require("mongoose");
 
+const bookedSeatSchema = new mongoose.Schema({
+  seatNumber: { type: String, required: true },
+  bookingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking' },
+  passengerName: { type: String }
+});
+
 const seatSchema = new mongoose.Schema({
-  busNumber: { type: String, required: true }, // references Bus.busNumber
-  totalSeats: { type: Number, required: true },
+  busNumber: { type: String, required: true },
   date: { type: Date, required: true },
+  seats: { type: [String], required: true }, // Available seats like ["1-1", "1-2"]
+  bookedSeats: [bookedSeatSchema], // Track booked seats with details
   availableSeats: { type: Number, required: true },
-  seats: {
-    type: [String], // ✅ Array of seat identifiers like ["1-1", "1-2", "2-3"]
-    default: [],
-  },
   price: { type: Number, required: true }
 }, { timestamps: true });
 
 module.exports = mongoose.model("Seat", seatSchema);
-
-

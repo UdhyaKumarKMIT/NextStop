@@ -41,6 +41,7 @@ const ProfilePage = () => {
         });
 
         const user = res.data.user;
+          
         setProfile(user);
         setEditProfile(user);
         
