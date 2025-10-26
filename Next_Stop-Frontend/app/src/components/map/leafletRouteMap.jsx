@@ -1,281 +1,369 @@
 // components/LeafletRouteMap.jsx
-import React, { useEffect, useRef, useState } from 'react';
-
-// Import Leaflet directly (remove dynamic imports)
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import React, { useEffect, useRef } from 'react';
 
 const LeafletRouteMap = ({ fromCity, toCity }) => {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
-  const [distance, setDistance] = useState(null);
-  const [duration, setDuration] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [mapReady, setMapReady] = useState(false);
-  const [error, setError] = useState(null);
+  const markersRef = useRef([]);
 
-  // Simple one-time map initialization
-  useEffect(() => {
-    if (!mapRef.current || mapInstance.current) return;
+  // Tamil Nadu city coordinates with route waypoints
+  const cityCoordinates = {
+    "chennai": [13.0827, 80.2707],
+    "coimbatore": [11.0168, 76.9558],
+    "madurai": [9.9252, 78.1198],
+    "trichy": [10.7905, 78.7047],
+    "kanyakumari": [8.0883, 77.5385],
+    "salem": [11.6643, 78.1460],
+    "tirunelveli": [8.7139, 77.7567],
+    "vellore": [12.9165, 79.1325]
+  };
 
-    console.log('🗺️ Initializing map...');
-
-    try {
-      // Create map instance
-      mapInstance.current = L.map(mapRef.current, {
-        zoomControl: true,
-        dragging: true,
-        scrollWheelZoom: true,
-      }).setView([20.5937, 78.9629], 5);
-
-      // Add tile layer
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 19,
-      }).addTo(mapInstance.current);
-
-      console.log('✅ Map created');
+  // Function to generate curved route points
+  const generateCurvedRoute = (start, end) => {
+    const points = [start];
+    
+    // Calculate intermediate points for curvature
+    const distance = Math.sqrt(
+      Math.pow(end[0] - start[0], 2) + Math.pow(end[1] - start[1], 2)
+    );
+    
+    // Add curvature based on distance and direction
+    const curvature = 0.3; // Adjust this value for more/less curvature
+    
+    // Midpoint with curvature
+    const midLat = (start[0] + end[0]) / 2;
+    const midLng = (start[1] + end[1]) / 2;
+    
+    // Calculate perpendicular direction for curvature
+    const dx = end[1] - start[1];
+    const dy = end[0] - start[0];
+    
+    // Control point for Bezier curve
+    const controlLat = midLat + (-dy) * curvature;
+    const controlLng = midLng + (dx) * curvature;
+    
+    // Generate points along the curve
+    for (let t = 0.1; t < 1; t += 0.2) {
+      const lat = 
+        Math.pow(1 - t, 2) * start[0] + 
+        2 * (1 - t) * t * controlLat + 
+        Math.pow(t, 2) * end[0];
       
-      // Set map as ready after a short delay
-      setTimeout(() => {
-        setMapReady(true);
-        console.log('✅ Map ready');
-      }, 500);
+      const lng = 
+        Math.pow(1 - t, 2) * start[1] + 
+        2 * (1 - t) * t * controlLng + 
+        Math.pow(t, 2) * end[1];
+      
+      points.push([lat, lng]);
+    }
+    
+    points.push(end);
+    return points;
+  };
 
-    } catch (err) {
-      console.error('❌ Map initialization failed:', err);
-      setError('Failed to initialize map');
+  // Function to generate realistic route based on actual Tamil Nadu highways
+  const generateRealisticRoute = (fromCity, toCity) => {
+    const fromCoord = cityCoordinates[fromCity.toLowerCase()];
+    const toCoord = cityCoordinates[toCity.toLowerCase()];
+    
+    if (!fromCoord || !toCoord) return [fromCoord, toCoord];
+
+    // Define major highway waypoints in Tamil Nadu
+    const highwayPoints = {
+      "chennai-madurai": [
+        [13.0827, 80.2707], // Chennai
+        [12.8392, 79.7008], // Sriperumbudur
+        [12.5200, 79.9000], // Kanchipuram area
+        [11.6643, 78.1460], // Salem
+        [10.7905, 78.7047], // Trichy
+        [10.0000, 78.0000], // Dindigul area
+        [9.9252, 78.1198]   // Madurai
+      ],
+      "chennai-trichy": [
+        [13.0827, 80.2707], // Chennai
+        [12.8392, 79.7008], // Sriperumbudur
+        [12.5200, 79.9000], // Kanchipuram
+        [11.6643, 78.1460], // Salem
+        [11.1000, 78.4000], // Namakkal area
+        [10.7905, 78.7047]  // Trichy
+      ],
+      "chennai-coimbatore": [
+        [13.0827, 80.2707], // Chennai
+        [12.8392, 79.7008], // Sriperumbudur
+        [12.5200, 79.9000], // Kanchipuram
+        [11.6643, 78.1460], // Salem
+        [11.0000, 77.0000], // Erode area
+        [11.0168, 76.9558]  // Coimbatore
+      ],
+      "madurai-trichy": [
+        [9.9252, 78.1198],  // Madurai
+        [10.3000, 78.2000], // Melur area
+        [10.5000, 78.5000], // Pudukkottai area
+        [10.7905, 78.7047]  // Trichy
+      ],
+      "coimbatore-madurai": [
+        [11.0168, 76.9558], // Coimbatore
+        [10.9000, 77.4000], // Dharapuram area
+        [10.5000, 77.8000], // Dindigul area
+        [10.0000, 77.9000], // Theni area
+        [9.9252, 78.1198]   // Madurai
+      ]
+    };
+
+    const routeKey = `${fromCity.toLowerCase()}-${toCity.toLowerCase()}`;
+    const reverseKey = `${toCity.toLowerCase()}-${fromCity.toLowerCase()}`;
+    
+    if (highwayPoints[routeKey]) {
+      return highwayPoints[routeKey];
+    } else if (highwayPoints[reverseKey]) {
+      return [...highwayPoints[reverseKey]].reverse();
+    } else {
+      // Fallback to curved route
+      return generateCurvedRoute(fromCoord, toCoord);
+    }
+  };
+
+  useEffect(() => {
+    // Check if cities are provided
+    if (!fromCity || !toCity) {
+      console.log("⏳ Waiting for city data...");
+      return;
     }
 
-    // Cleanup
+    console.log("🗺️ Initializing map for:", fromCity, "→", toCity);
+
+    const initMap = async () => {
+      try {
+        // Dynamically import Leaflet
+        const L = await import('leaflet');
+        
+        // Import Leaflet CSS
+        await import('leaflet/dist/leaflet.css');
+
+        // Fix for default markers
+        delete L.Icon.Default.prototype._getIconUrl;
+        L.Icon.Default.mergeOptions({
+          iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+          iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+        });
+
+        if (!mapRef.current) {
+          console.log("❌ Map container not found");
+          return;
+        }
+
+        // Clean up previous map instance
+        if (mapInstance.current) {
+          mapInstance.current.remove();
+          markersRef.current = [];
+        }
+
+        // Get coordinates and generate route
+        const fromCoord = cityCoordinates[fromCity.toLowerCase()];
+        const toCoord = cityCoordinates[toCity.toLowerCase()];
+
+        if (!fromCoord || !toCoord) {
+          console.log("❌ Coordinates not found for cities");
+          return;
+        }
+
+        console.log("📍 Coordinates:", { fromCoord, toCoord });
+
+        // Generate realistic route
+        const routePoints = generateRealisticRoute(fromCity, toCity);
+        console.log("🛣️ Route points:", routePoints);
+
+        // Calculate center point
+        const center = [
+          (fromCoord[0] + toCoord[0]) / 2,
+          (fromCoord[1] + toCoord[1]) / 2
+        ];
+
+        // Initialize map
+        const map = L.map(mapRef.current).setView(center, 8);
+        mapInstance.current = map;
+
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Create custom icons
+        const startIcon = L.divIcon({
+          html: `
+            <div style="
+              background-color: #10B981; 
+              width: 24px; 
+              height: 24px; 
+              border-radius: 50%; 
+              border: 3px solid white; 
+              box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-weight: bold;
+              color: white;
+              font-size: 12px;
+            ">A</div>
+          `,
+          className: 'custom-div-icon',
+          iconSize: [24, 24],
+          iconAnchor: [12, 12],
+        });
+
+        const endIcon = L.divIcon({
+          html: `
+            <div style="
+              background-color: #EF4444; 
+              width: 24px; 
+              height: 24px; 
+              border-radius: 50%; 
+              border: 3px solid white; 
+              box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-weight: bold;
+              color: white;
+              font-size: 12px;
+            ">B</div>
+          `,
+          className: 'custom-div-icon',
+          iconSize: [24, 24],
+          iconAnchor: [12, 12],
+        });
+
+        // Add start marker
+        const startMarker = L.marker(fromCoord, { icon: startIcon })
+          .addTo(map)
+          .bindPopup(`
+            <div style="text-align: center; min-width: 120px;">
+              <strong style="color: #10B981;">🚗 Departure</strong><br/>
+              <strong>${fromCity}</strong>
+            </div>
+          `)
+          .openPopup();
+        markersRef.current.push(startMarker);
+
+        // Add end marker
+        const endMarker = L.marker(toCoord, { icon: endIcon })
+          .addTo(map)
+          .bindPopup(`
+            <div style="text-align: center; min-width: 120px;">
+              <strong style="color: #EF4444;">🏁 Destination</strong><br/>
+              <strong>${toCity}</strong>
+            </div>
+          `);
+        markersRef.current.push(endMarker);
+
+        // Draw curved route line
+        const routeLine = L.polyline(routePoints, {
+          color: '#3B82F6',
+          weight: 5,
+          opacity: 0.8,
+          lineJoin: 'round'
+        }).addTo(map);
+        markersRef.current.push(routeLine);
+
+        // Add intermediate waypoint markers for longer routes
+        if (routePoints.length > 3) {
+          for (let i = 1; i < routePoints.length - 1; i++) {
+            const waypointIcon = L.divIcon({
+              html: `
+                <div style="
+                  background-color: #F59E0B; 
+                  width: 8px; 
+                  height: 8px; 
+                  border-radius: 50%; 
+                  border: 2px solid white;
+                  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                "></div>
+              `,
+              className: 'waypoint-icon',
+              iconSize: [8, 8],
+              iconAnchor: [4, 4],
+            });
+            
+            const waypointMarker = L.marker(routePoints[i], { icon: waypointIcon })
+              .addTo(map);
+            markersRef.current.push(waypointMarker);
+          }
+        }
+
+        // Fit map to show the entire route
+        const bounds = L.latLngBounds(routePoints);
+        map.fitBounds(bounds, { padding: [30, 30] });
+
+        console.log("✅ Map initialized successfully with curved route");
+
+      } catch (error) {
+        console.error('❌ Error loading Leaflet:', error);
+      }
+    };
+
+    initMap();
+
+    // Cleanup function
     return () => {
       if (mapInstance.current) {
         mapInstance.current.remove();
         mapInstance.current = null;
       }
+      markersRef.current = [];
     };
-  }, []);
-
-  // Handle route calculation
-  useEffect(() => {
-    if (!fromCity || !toCity || !mapReady || !mapInstance.current) {
-      console.log('⏸️ Skipping route calc:', { fromCity, toCity, mapReady, hasMap: !!mapInstance.current });
-      return;
-    }
-
-    console.log('🔄 Calculating route...');
-
-    const fetchRoute = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const map = mapInstance.current;
-
-        // Clear previous layers
-        map.eachLayer((layer) => {
-          if (layer instanceof L.Polyline || layer instanceof L.Marker) {
-            map.removeLayer(layer);
-          }
-        });
-
-        // Geocode cities
-        const geocodeCity = async (cityName) => {
-          try {
-            console.log('📍 Geocoding:', cityName);
-            const response = await fetch(
-              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cityName)}&limit=1&countrycodes=in`
-            );
-            
-            if (!response.ok) throw new Error('Geocoding failed');
-            
-            const data = await response.json();
-            if (data.length > 0) {
-              const coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
-              console.log('✅ Geocoded:', cityName, coords);
-              return coords;
-            }
-            return null;
-          } catch (err) {
-            console.error('❌ Geocoding error:', err);
-            return null;
-          }
-        };
-
-        // Get route from OSRM
-        const getRouteFromOSRM = async (start, end) => {
-          try {
-            console.log('🛣️ Getting route from OSRM...');
-            const response = await fetch(
-              `https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`
-            );
-            
-            if (!response.ok) throw new Error('OSRM request failed');
-            
-            const data = await response.json();
-            
-            if (data.routes && data.routes.length > 0) {
-              const routeData = data.routes[0];
-              setDistance((routeData.distance / 1000).toFixed(1));
-              setDuration(Math.ceil(routeData.duration / 60));
-              
-              const coordinates = routeData.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-              console.log('✅ Route found, coordinates:', coordinates.length);
-              return coordinates;
-            }
-            console.warn('⚠️ No route found, using straight line');
-            return [start, end];
-          } catch (err) {
-            console.error('❌ OSRM error:', err);
-            return [start, end];
-          }
-        };
-
-        const fromCoords = await geocodeCity(fromCity);
-        const toCoords = await geocodeCity(toCity);
-
-        if (fromCoords && toCoords) {
-          console.log('📍 Coordinates:', { from: fromCoords, to: toCoords });
-          
-          const routeCoordinates = await getRouteFromOSRM(fromCoords, toCoords);
-          
-          // Create custom markers
-          const createIcon = (color) => L.divIcon({
-            html: `<div style="background:${color}; width:16px; height:16px; border-radius:50%; border:3px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>`,
-            iconSize: [22, 22],
-            iconAnchor: [11, 11]
-          });
-
-          // Add markers
-          L.marker(fromCoords, { icon: createIcon('#22c55e') })
-            .addTo(map)
-            .bindPopup(`<div style="padding: 8px; text-align: center;"><strong>${fromCity}</strong><br>Departure</div>`);
-
-          L.marker(toCoords, { icon: createIcon('#ef4444') })
-            .addTo(map)
-            .bindPopup(`<div style="padding: 8px; text-align: center;"><strong>${toCity}</strong><br>Destination</div>`);
-
-          // Add route
-          L.polyline(routeCoordinates, {
-            color: '#dc2626',
-            weight: 5,
-            opacity: 0.8,
-            lineJoin: 'round'
-          }).addTo(map);
-          
-          // Fit map to show entire route
-          const bounds = L.latLngBounds(routeCoordinates);
-          map.fitBounds(bounds, { 
-            padding: [20, 20],
-            maxZoom: 10
-          });
-
-          console.log('✅ Route displayed on map');
-
-          // Force refresh
-          setTimeout(() => {
-            map.invalidateSize(true);
-          }, 100);
-
-        } else {
-          setError('Could not find coordinates for the selected cities');
-        }
-
-      } catch (err) {
-        console.error('❌ Route calculation error:', err);
-        setError('Failed to calculate route');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRoute();
-  }, [fromCity, toCity, mapReady]);
-
-  // Debug: Check what's happening
-  useEffect(() => {
-    console.log('🔍 Current state:', { fromCity, toCity, mapReady, loading, error });
-  }, [fromCity, toCity, mapReady, loading, error]);
+  }, [fromCity, toCity]);
 
   if (!fromCity || !toCity) {
     return (
-      <div className="bg-gray-100 rounded-lg p-6 text-center">
-        <p className="text-gray-500">Select source and destination to view route</p>
+      <div className="w-full h-96 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
+        <div className="text-center text-gray-500">
+          <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+          </svg>
+          <h3 className="text-lg font-semibold mb-2">Route Map</h3>
+          <p>Select departure and destination cities</p>
+          <p className="text-sm mt-1">to view the interactive map</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-4 mb-6">
-      <h3 className="text-lg font-semibold mb-4 text-gray-800">
-        Route: {fromCity} → {toCity}
-      </h3>
-
-      {/* Error display */}
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-red-700 text-sm">{error}</p>
-        </div>
-      )}
-
-      {/* Status info */}
-      <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-        <div className="flex items-center justify-between text-sm">
-          <div className="text-blue-800">
-            <span className="font-medium">Status:</span>{' '}
-            {!mapReady && '🔄 Initializing map...'}
-            {mapReady && loading && '🔄 Calculating route...'}
-            {mapReady && !loading && '✅ Ready'}
+    <div className="w-full rounded-lg overflow-hidden shadow-lg border border-gray-200">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 text-white">
+        <h3 className="font-bold text-lg">
+          Route Map: {fromCity} → {toCity}
+        </h3>
+        <div className="flex gap-4 mt-2 text-blue-100 text-sm">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+            <span>Departure (A)</span>
           </div>
-          <button 
-            onClick={() => mapInstance.current?.invalidateSize(true)}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition"
-            disabled={!mapReady}
-          >
-            Refresh
-          </button>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+            <span>Destination (B)</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-4 h-1 bg-yellow-500 rounded-full"></div>
+            <span>Waypoints</span>
+          </div>
         </div>
       </div>
-
-      {/* Route information */}
-      {(distance || duration) && (
-        <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
-          <div className="flex justify-between text-sm text-green-800">
-            {distance && (
-              <span className="flex items-center">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                Distance: <strong className="ml-1">{distance} km</strong>
-              </span>
-            )}
-            {duration && (
-              <span className="flex items-center">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                Duration: <strong className="ml-1">{duration} min</strong>
-              </span>
-            )}
-          </div>
+      
+      {/* Map Container */}
+      <div 
+        ref={mapRef} 
+        className="w-full h-96 bg-gray-100"
+        style={{ minHeight: '384px' }}
+      />
+      
+      {/* Footer */}
+      <div className="bg-white p-3 border-t text-sm text-gray-600">
+        <div className="flex justify-between items-center">
+          <span className="text-xs text-gray-500">Powered by OpenStreetMap</span>
         </div>
-      )}
-
-      {/* Map container */}
-      <div className="relative">
-        <div 
-          ref={mapRef} 
-          className="h-64 rounded-lg border-2 border-gray-300 bg-gray-50"
-          style={{ minHeight: '256px' }}
-        />
-        
-        {/* Loading overlay */}
-        {(!mapReady || loading) && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 rounded-lg">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-              <p className="text-gray-600 text-sm">
-                {!mapReady ? 'Initializing map...' : 'Calculating route...'}
-              </p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

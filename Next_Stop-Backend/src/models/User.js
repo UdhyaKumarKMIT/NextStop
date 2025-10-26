@@ -12,7 +12,8 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   role: { type: String, enum: ["user", "admin"], default: "user" },
   resetCode: { type: String },
-  resetCodeExpiry: { type: Date }
+  resetCodeExpiry: { type: Date },
+  
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", userSchema);

@@ -1,6 +1,5 @@
 import React from "react";
-
-import { useEffect} from "react";
+import { useEffect,useState} from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import emailjs from "emailjs-com";
 import Navbar from "../components/Navbar";
@@ -11,13 +10,16 @@ const API_BASE_URL = "http://localhost:5050/api";
 const FinalizePayment = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const user=null;
+  
+  // Fix: Use useState for user data
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         const token = localStorage.getItem("token");
         if (!token) {
-       
           return;
         }
 
@@ -25,16 +27,9 @@ const FinalizePayment = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        user = res.data.user;
-          
-        
-      
-
+        setUser(res.data.user); // Fix: Use setUser instead of direct assignment
       } catch (err) {
         console.error("Failed to fetch user:", err);
-       
-      } finally {
-        
       }
     };
 
@@ -83,15 +78,22 @@ const FinalizePayment = () => {
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrData}`;
 
   const handlePayment = async () => {
+    setLoading(true);
     try {
+      // Check if user data is available
+      if (!user || !user.email) {
+        alert("User information not available. Please login again.");
+        navigate("/login");
+        return;
+      }
+
       // First, create the booking in the database
       const bookingData = {
-       
         busNumber: bus.busNumber,
         routeId: bus.route?.routeId,
         seatNumbers: selectedSeats,
         journeyDate: journeyDate,
-        boardingPoint: bus.route?.source, // or make this dynamic based on user selection
+        boardingPoint: bus.route?.source,
         totalFare: finalAmount,
         passengerDetails: passengerDetails.map((passenger, index) => ({
           seatNumber: selectedSeats[index],
@@ -129,9 +131,10 @@ const FinalizePayment = () => {
           )
           .join("\n");
 
+        // Use user's email instead of hardcoded email
         const templateParams = {
-          to_name: passengerDetails[0]?.name || "Passenger",
-          to_email: "malarvannanm11@gmail.com",
+          to_name: passengerDetails[0]?.name || user.name || "Passenger",
+          to_email: user.email, // Use user's email from profile
           bus_name: bus.busName,
           bus_type: bus.type,
           bus_number: bus.busNumber,
@@ -141,14 +144,20 @@ const FinalizePayment = () => {
           seats: selectedSeats.join(", "),
           passengers: passengerList,
           ticket_id: ticketId,
-          total_amount: totalPrice,
+           total_amount: totalPrice.toFixed(2), // Ensure proper formatting
+          discount: discount.toFixed(2), // Ensure proper formatting
+          final_amount: finalAmount.toFixed(2), // Ensure proper formatting
           discount: discount,
           final_amount: finalAmount,
           operator1: `${bus.operatorName1} - ${bus.operatorPhone1}`,
           operator2: bus.operatorName2 ? `${bus.operatorName2} - ${bus.operatorPhone2}` : "N/A",
           qr_code_url: qrUrl,
-          booking_id: booking._id // Include booking ID in email
+          booking_id: booking._id
         };
+
+        console.log("Email template parameters:", templateParams);
+
+        console.log("Sending email to:", user.email);
 
         // Send email using EmailJS
         emailjs
@@ -159,14 +168,15 @@ const FinalizePayment = () => {
             "bQLV-wFxJ_cfNWDs3"    // EmailJS public key
           )
           .then(() => {
-            console.log("Ticket email sent successfully!");
+            console.log("Ticket email sent successfully to:", user.email);
             // Navigate to ticket page after successful email
             navigate("/ticket", { 
               state: { 
                 ...ticketData, 
                 qrUrl,
                 emailSent: true,
-                booking: booking // Include booking data in navigation
+                booking: booking,
+                userEmail: user.email // Include user email in state for debugging
               } 
             });
           })
@@ -179,7 +189,8 @@ const FinalizePayment = () => {
                 qrUrl,
                 emailSent: false,
                 emailError: err.message,
-                booking: booking // Include booking data even if email fails
+                booking: booking,
+                userEmail: user.email
               } 
             });
           });
@@ -189,11 +200,10 @@ const FinalizePayment = () => {
     } catch (error) {
       console.error("Payment processing error:", error);
       alert(`Booking failed: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
-
-  // If no booking data found
-  
 
   // If no booking data found
   if (!bus.busName || selectedSeats.length === 0) {
@@ -229,6 +239,11 @@ const FinalizePayment = () => {
             <p className="text-gray-600">
               Review your booking details and complete the payment
             </p>
+            {user && (
+              <p className="text-sm text-green-600 mt-2">
+                Ticket will be sent to: {user.email}
+              </p>
+            )}
           </div>
 
           <div className="grid md:grid-cols-2 gap-8">
@@ -348,13 +363,23 @@ const FinalizePayment = () => {
           <div className="bg-white rounded-xl shadow-lg p-6 mt-8 text-center">
             <button
               onClick={handlePayment}
-              className="bg-red-600 text-white px-8 py-4 rounded-lg hover:bg-red-700 transition transform hover:scale-105 text-lg font-semibold"
+              disabled={loading || !user}
+              className={`px-8 py-4 rounded-lg transition transform hover:scale-105 text-lg font-semibold ${
+                loading || !user
+                  ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                  : "bg-red-600 text-white hover:bg-red-700"
+              }`}
             >
-              Confirm & Pay ₹{finalAmount.toFixed(2)}
+              {loading ? "Processing..." : `Confirm & Pay ₹${finalAmount.toFixed(2)}`}
             </button>
             <p className="text-sm text-gray-500 mt-3">
               By proceeding, you agree to our terms and conditions
             </p>
+            {!user && (
+              <p className="text-red-500 text-sm mt-2">
+                Loading user information...
+              </p>
+            )}
           </div>
         </div>
       </div>
