@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import LeafletRouteMap from "../components/map/leafletRouteMap";
 
 const BookingPage = () => {
   const [fromCity, setFromCity] = useState("");
@@ -91,6 +92,11 @@ const BookingPage = () => {
         <h1 className="text-3xl font-bold text-center text-red-600 mb-8">
           Book Your Bus
         </h1>
+
+        {/* 🗺️ Route Map Section - ADD THIS */}
+        {/*<RouteMap fromCity={fromCity} toCity={toCity} />*/}
+        {/* OR */}
+        <LeafletRouteMap fromCity={fromCity} toCity={toCity} /> 
 
         {/* 🔍 Search Section */}
         <div className="bg-white shadow-lg rounded-xl p-6 max-w-4xl mx-auto mb-10">
