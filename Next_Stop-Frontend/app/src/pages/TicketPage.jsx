@@ -58,10 +58,10 @@ const TicketPage = () => {
             Print Ticket
           </button>
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/profile")}
             className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition"
           >
-            Back to Home
+            Back to Profile
           </button>
         </div>
       </div>

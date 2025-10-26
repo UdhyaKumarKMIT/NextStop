@@ -229,7 +229,7 @@ const fetchBookings = async () => {
       .replace(/[^a-z0-9-]/g, '');
     
     // Open destination info in new tab
-    const destinationURL = `https://${formattedDestination}.nic.in`;
+    const destinationURL = `https://en.wikipedia.org/wiki/${formattedDestination.replace(/-/g, '_')}`;
     
     // First try the .nic.in domain
     const newWindow = window.open(destinationURL, '_blank');
@@ -313,6 +313,14 @@ const fetchBookings = async () => {
       <div className="max-w-6xl mx-auto p-8 flex gap-6">
         {/* Sidebar Tabs */}
         <div className="w-1/4 bg-white rounded-lg shadow-md p-6 space-y-4">
+        <button
+            onClick={() => navigate("/booking")}
+            className={`w-full text-left p-2 rounded transition-colors ${
+              activeTab === "booking" ? "bg-red-600 text-white" : "hover:bg-red-100"
+            }`}
+          >
+            Go to Booking
+          </button>
           <button
             onClick={() => setActiveTab("profile")}
             className={`w-full text-left p-2 rounded transition-colors ${
