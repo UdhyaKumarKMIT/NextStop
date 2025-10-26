@@ -14,8 +14,7 @@ const SeatBookingPage = () => {
 
   // Seat layout configuration
   const rows = 10;
-  const cols = 4;
-
+  
   useEffect(() => {
     if (!bus) {
       navigate("/booking");

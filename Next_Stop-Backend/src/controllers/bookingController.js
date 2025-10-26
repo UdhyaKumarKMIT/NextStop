@@ -129,7 +129,7 @@ const bookTicket = async (req, res) => {
       }
       return bookedSeat;
     });
-    
+  
     await seatData.save();
 
     res.status(201).json({

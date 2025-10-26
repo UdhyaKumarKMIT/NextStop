@@ -1,6 +1,6 @@
 import React from "react";
 
-import { useState,useEffect} from "react";
+import { useEffect} from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import emailjs from "emailjs-com";
 import Navbar from "../components/Navbar";

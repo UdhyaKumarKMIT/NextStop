@@ -11,7 +11,7 @@ const seatSchema = new mongoose.Schema({
   date: { type: Date, required: true },
   seats: { type: [String], required: true }, // Available seats like ["1-1", "1-2"]
   bookedSeats: [bookedSeatSchema], // Track booked seats with details
-  availableSeats: { type: Number, required: true },
+  availableSeats: { type: Number, required: true }, //count of available seats
   price: { type: Number, required: true }
 }, { timestamps: true });
 
