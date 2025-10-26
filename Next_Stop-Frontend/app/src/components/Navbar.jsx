@@ -16,12 +16,19 @@ const Navbar = () => {
 
       {/* Right side buttons */}
       <div className="flex items-center space-x-4">
+        {/* Leaderboard Button */}
+        <button
+          onClick={() => navigate("/leaderboard")}
+          className="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition flex items-center space-x-2"
+        >
+          <span>🏆 Leaderboard</span>
+        </button>
+
         {/* Chatbot Button */}
         <button
           onClick={() => navigate("/chatbot")}
           className="bg-white text-red-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition flex items-center space-x-2"
         >
-          
           <span>Chatbot</span>
         </button>
 

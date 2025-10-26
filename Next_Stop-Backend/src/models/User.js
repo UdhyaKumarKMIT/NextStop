@@ -13,7 +13,32 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ["user", "admin"], default: "user" },
   resetCode: { type: String },
   resetCodeExpiry: { type: Date },
-  
+  score: {
+    type: Number,
+    default: 0
+  },
+  totalBookings: {
+    type: Number,
+    default: 0
+  },
+  totalSpent: {
+    type: Number,
+    default: 0
+  },
+  rewards: [{
+    type: {
+      type: String, // 'discount', 'voucher', etc.
+      required: true
+    },
+    value: Number,
+    description: String,
+    expiresAt: Date,
+    used: {
+      type: Boolean,
+      default: false
+    }
+  }],
+  lastRewardDate: Date
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", userSchema);

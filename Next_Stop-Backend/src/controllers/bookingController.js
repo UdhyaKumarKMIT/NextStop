@@ -2,6 +2,7 @@ const Booking = require("../models/Booking");
 const Bus = require("../models/Bus");
 const Route = require("../models/Route");
 const Seat = require("../models/Seat");
+const User = require("../models/User"); // Add User model import
 
 // ---------------- BOOK A TICKET ----------------
 const bookTicket = async (req, res) => {
@@ -148,10 +149,36 @@ const bookTicket = async (req, res) => {
     
     await seatData.save();
 
+    // ✅ LEADERBOARD INTEGRATION: Update user score and stats
+    try {
+      const scoreToAdd = 10; // +10 points per booking
+      const userUpdate = await User.findOneAndUpdate(
+        { username: username },
+        { 
+          $inc: { 
+            score: scoreToAdd,
+            totalBookings: 1,
+            totalSpent: parseFloat(totalFare) || 0
+          }
+        },
+        { new: true } // Return updated document
+      );
+
+      if (userUpdate) {
+        console.log(`✅ User ${username} score updated: +${scoreToAdd} points, Total: ${userUpdate.score}`);
+      } else {
+        console.warn(`⚠️ User ${username} not found for score update`);
+      }
+    } catch (scoreError) {
+      console.error("❌ Error updating user score:", scoreError);
+      // Don't fail the booking if score update fails
+    }
+
     res.status(201).json({
       success: true,
       message: "Booking successful",
       booking: savedBooking,
+      scoreAdded: 10 // Inform frontend about score addition
     });
   } catch (err) {
     console.error("Booking Error:", err);
@@ -222,6 +249,24 @@ const cancelBooking = async (req, res) => {
 
     booking.bookingStatus = "Cancelled";
     await booking.save();
+
+    // ✅ LEADERBOARD INTEGRATION: Deduct score on cancellation
+    try {
+      const scoreToDeduct = 10; // Deduct 10 points on cancellation
+      await User.findOneAndUpdate(
+        { username: booking.username },
+        { 
+          $inc: { 
+            score: -scoreToDeduct,
+            totalBookings: -1,
+            totalSpent: -parseFloat(booking.totalFare) || 0
+          }
+        }
+      );
+      console.log(`📉 User ${booking.username} score deducted: -${scoreToDeduct} points due to cancellation`);
+    } catch (scoreError) {
+      console.error("❌ Error deducting user score on cancellation:", scoreError);
+    }
 
     res.json({ 
       success: true,

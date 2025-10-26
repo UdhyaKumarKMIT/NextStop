@@ -22,13 +22,24 @@ const ProfilePage = () => {
     mobileNo: "",
     altMobileNo: "",
     dob: "",
-    address: ""
+    address: "",
+    score: 0,
+    totalBookings: 0,
+    totalSpent: 0
   });
 
   const [editProfile, setEditProfile] = useState({ ...profile });
   const [currentBookings, setCurrentBookings] = useState([]);
   const [pastBookings, setPastBookings] = useState([]);
-  const [routeInfo, setRouteInfo] = useState({}); // Store route information
+  const [routeInfo, setRouteInfo] = useState({});
+  
+  // Leaderboard state
+  const [userRank, setUserRank] = useState(null);
+  const [rewards, setRewards] = useState([]);
+  const [leaderboardStats, setLeaderboardStats] = useState({
+    totalUsers: 0,
+    topScore: 0
+  });
 
   // ✅ Fetch user info after login
   useEffect(() => {
@@ -48,6 +59,11 @@ const ProfilePage = () => {
         setProfile(user);
         setEditProfile(user);
 
+        // Fetch additional leaderboard data
+        await fetchUserRank(token);
+        await fetchUserRewards(token);
+        await fetchLeaderboardStats(token);
+
       } catch (err) {
         console.error("Failed to fetch user:", err);
         setMessage({ type: 'error', text: 'Failed to load profile' });
@@ -59,83 +75,139 @@ const ProfilePage = () => {
     fetchProfile();
   }, []);
 
+  // ✅ Fetch user rank
+  const fetchUserRank = async (token) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/leaderboard/my-rank`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUserRank(response.data.rank);
+    } catch (error) {
+      console.error("Error fetching user rank:", error);
+      // If leaderboard API fails, calculate rank from all users
+      try {
+        const allUsersResponse = await axios.get(`${API_BASE_URL}/leaderboard`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const allUsers = allUsersResponse.data.leaderboard || [];
+        const currentUserIndex = allUsers.findIndex(user => user.username === profile.username);
+        if (currentUserIndex !== -1) {
+          setUserRank(currentUserIndex + 1);
+        }
+      } catch (fallbackError) {
+        console.error("Fallback rank fetch failed:", fallbackError);
+      }
+    }
+  };
+
+  // ✅ Fetch user rewards
+  const fetchUserRewards = async (token) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/leaderboard/my-rewards`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setRewards(response.data.rewards || []);
+    } catch (error) {
+      console.error("Error fetching rewards:", error);
+      // Fallback to profile rewards if separate API fails
+      try {
+        const profileResponse = await axios.get(`${API_BASE_URL}/auth/getUserProfile`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setRewards(profileResponse.data.user.rewards || []);
+      } catch (fallbackError) {
+        console.error("Fallback rewards fetch failed:", fallbackError);
+      }
+    }
+  };
+
+  // ✅ Fetch leaderboard stats
+  const fetchLeaderboardStats = async (token) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/leaderboard`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const leaderboard = response.data.leaderboard || [];
+      if (leaderboard.length > 0) {
+        setLeaderboardStats({
+          totalUsers: leaderboard.length,
+          topScore: leaderboard[0]?.score || 0
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching leaderboard stats:", error);
+    }
+  };
+
   // ✅ Fetch bookings when bookings tab is active
   useEffect(() => {
-    // In the fetchBookings useEffect, add more logging:
-const fetchBookings = async () => {
-  if (activeTab === "current" || activeTab === "past") {
-    try {
-      setBookingsLoading(true);
-      const token = localStorage.getItem("token");
-      if (!token) return;
-
-      console.log("Fetching bookings...");
-      const response = await axios.get(`${API_BASE_URL}/bookings/my-bookings`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const allBookings = response.data.bookings || [];
-      console.log("All bookings:", allBookings);
-
-      // Fetch route information for each booking
-      const routePromises = allBookings.map(async (booking) => {
+    const fetchBookings = async () => {
+      if (activeTab === "current" || activeTab === "past") {
         try {
-          console.log(`Fetching route for routeId: ${booking.routeId}`);
-          const routeResponse = await axios.get(`${API_BASE_URL}/routes/${booking.routeId}`);
-          console.log(`Route response for ${booking.routeId}:`, routeResponse.data);
-          
-          return { 
-            routeId: booking.routeId, 
-            destination: routeResponse.data.route?.destination || 'Unknown',
-            source: routeResponse.data.route?.source || 'Unknown'
-          };
-        } catch (error) {
-          console.error(`Failed to fetch route for ${booking.routeId}:`, error.response?.data || error.message);
-          return { 
-            routeId: booking.routeId, 
-            destination: 'Unknown Destination',
-            source: 'Unknown'
-          };
+          setBookingsLoading(true);
+          const token = localStorage.getItem("token");
+          if (!token) return;
+
+          const response = await axios.get(`${API_BASE_URL}/bookings/my-bookings`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          const allBookings = response.data.bookings || [];
+
+          // Fetch route information for each booking
+          const routePromises = allBookings.map(async (booking) => {
+            try {
+              const routeResponse = await axios.get(`${API_BASE_URL}/routes/${booking.routeId}`);
+              return { 
+                routeId: booking.routeId, 
+                destination: routeResponse.data.route?.destination || 'Unknown',
+                source: routeResponse.data.route?.source || 'Unknown'
+              };
+            } catch (error) {
+              console.error(`Failed to fetch route for ${booking.routeId}:`, error.response?.data || error.message);
+              return { 
+                routeId: booking.routeId, 
+                destination: 'Unknown Destination',
+                source: 'Unknown'
+              };
+            }
+          });
+
+          const routesData = await Promise.all(routePromises);
+          const routeMap = {};
+          routesData.forEach(route => {
+            routeMap[route.routeId] = {
+              destination: route.destination,
+              source: route.source
+            };
+          });
+          setRouteInfo(routeMap);
+
+          // Separate current and past bookings
+          const now = new Date();
+          const current = [];
+          const past = [];
+
+          allBookings.forEach(booking => {
+            const journeyDate = new Date(booking.journeyDate);
+            if (journeyDate >= now && booking.bookingStatus === "Confirmed") {
+              current.push(booking);
+            } else {
+              past.push(booking);
+            }
+          });
+
+          setCurrentBookings(current);
+          setPastBookings(past);
+
+        } catch (err) {
+          console.error("Failed to fetch bookings:", err);
+          setMessage({ type: 'error', text: 'Failed to load bookings' });
+        } finally {
+          setBookingsLoading(false);
         }
-      });
-
-      const routesData = await Promise.all(routePromises);
-      console.log("Routes data:", routesData);
-      
-      const routeMap = {};
-      routesData.forEach(route => {
-        routeMap[route.routeId] = {
-          destination: route.destination,
-          source: route.source
-        };
-      });
-      setRouteInfo(routeMap);
-
-      // Separate current and past bookings
-      const now = new Date();
-      const current = [];
-      const past = [];
-
-      allBookings.forEach(booking => {
-        const journeyDate = new Date(booking.journeyDate);
-        if (journeyDate >= now && booking.bookingStatus === "Confirmed") {
-          current.push(booking);
-        } else {
-          past.push(booking);
-        }
-      });
-
-      setCurrentBookings(current);
-      setPastBookings(past);
-
-    } catch (err) {
-      console.error("Failed to fetch bookings:", err);
-      setMessage({ type: 'error', text: 'Failed to load bookings' });
-    } finally {
-      setBookingsLoading(false);
-    }
-  }
-};
+      }
+    };
 
     fetchBookings();
   }, [activeTab]);
@@ -222,36 +294,32 @@ const fetchBookings = async () => {
 
   // ✅ Know Your Destination function
   const handleKnowDestination = (destination) => {
-    // Format destination for URL (convert to lowercase, replace spaces with hyphens)
     const formattedDestination = destination
       .toLowerCase()
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '');
     
-    // Open destination info in new tab
     const destinationURL = `https://en.wikipedia.org/wiki/${formattedDestination.replace(/-/g, '_')}`;
-    
-    // First try the .nic.in domain
     const newWindow = window.open(destinationURL, '_blank');
     
-    // If .nic.in doesn't work, try alternative sources
     setTimeout(() => {
       if (newWindow.closed || !newWindow.location.href) {
-        // Alternative: Wikipedia
         const wikiURL = `https://en.wikipedia.org/wiki/${formattedDestination.replace(/-/g, '_')}`;
         window.open(wikiURL, '_blank');
       }
     }, 1000);
   };
 
+  // ✅ Navigate to Leaderboard
+  const handleGoToLeaderboard = () => {
+    navigate("/leaderboard");
+  };
+
   // ✅ Logout function
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to logout?")) {
-      // Clear local storage
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      
-      // Redirect to login page
       navigate("/login");
     }
   };
@@ -280,6 +348,14 @@ const fetchBookings = async () => {
   // Get destination name from route info
   const getDestination = (routeId) => {
     return routeInfo[routeId]?.destination || 'Destination';
+  };
+
+  // Get rank badge color
+  const getRankBadge = (rank) => {
+    if (rank === 1) return "bg-yellow-100 text-yellow-800 border-yellow-300";
+    if (rank === 2) return "bg-gray-100 text-gray-800 border-gray-300";
+    if (rank === 3) return "bg-orange-100 text-orange-800 border-orange-300";
+    return "bg-blue-100 text-blue-800 border-blue-300";
   };
 
   if (loading) {
@@ -313,11 +389,9 @@ const fetchBookings = async () => {
       <div className="max-w-6xl mx-auto p-8 flex gap-6">
         {/* Sidebar Tabs */}
         <div className="w-1/4 bg-white rounded-lg shadow-md p-6 space-y-4">
-        <button
+          <button
             onClick={() => navigate("/booking")}
-            className={`w-full text-left p-2 rounded transition-colors ${
-              activeTab === "booking" ? "bg-red-600 text-white" : "hover:bg-red-100"
-            }`}
+            className="w-full text-left p-2 rounded transition-colors hover:bg-red-100 text-gray-700"
           >
             Go to Booking
           </button>
@@ -348,6 +422,15 @@ const fetchBookings = async () => {
           
           {/* Divider */}
           <div className="border-t border-gray-200 my-2"></div>
+
+          {/* Leaderboard Button */}
+          <button
+            onClick={handleGoToLeaderboard}
+            className="w-full text-left p-2 rounded transition-colors bg-yellow-100 text-yellow-800 hover:bg-yellow-200 flex items-center gap-2"
+          >
+            <span>🏆</span>
+            View Leaderboard
+          </button>
           
           {/* Logout Button */}
           <button
@@ -377,6 +460,94 @@ const fetchBookings = async () => {
           {/* Profile Information Tab */}
           {activeTab === "profile" && (
             <div>
+              {/* Leaderboard Stats Section */}
+              <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-lg p-6 text-white mb-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-2xl font-bold mb-2">Your Travel Stats</h2>
+                    <p className="text-red-100">Track your progress and earn rewards!</p>
+                  </div>
+                  <div className="text-right">
+                    {userRank && (
+                      <div className={`px-4 py-2 rounded-full border-2 ${getRankBadge(userRank)}`}>
+                        <span className="text-sm">Rank</span>
+                        <div className="text-2xl font-bold">#{userRank}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-4 mt-4">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold">{profile.score || 0}</div>
+                    <div className="text-red-100 text-sm">Total Points</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold">{profile.totalBookings || 0}</div>
+                    <div className="text-red-100 text-sm">Bookings</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold">₹{profile.totalSpent || 0}</div>
+                    <div className="text-red-100 text-sm">Total Spent</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rewards Section */}
+              {rewards.length > 0 && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
+                  <h2 className="text-2xl font-bold text-yellow-800 mb-4 flex items-center gap-2">
+                    🎁 Your Rewards
+                  </h2>
+                  <div className="space-y-3">
+                    {rewards.map((reward, index) => (
+                      <div key={index} className="bg-white border border-yellow-300 p-4 rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-semibold text-yellow-800">{reward.description}</p>
+                            <p className="text-sm text-yellow-600">
+                              Expires: {new Date(reward.expiresAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                            reward.used 
+                              ? "bg-gray-200 text-gray-600" 
+                              : "bg-green-200 text-green-700"
+                          }`}>
+                            {reward.used ? "Used" : "Active"}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* How to Earn Points */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+                <h3 className="text-xl font-bold text-blue-800 mb-3">📈 How to Earn Points</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-green-100 text-green-600 p-2 rounded-lg">
+                      ✅
+                    </div>
+                    <div>
+                      <p className="font-semibold">Complete a Booking</p>
+                      <p className="text-sm text-blue-600">+10 points per booking</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-blue-100 text-blue-600 p-2 rounded-lg">
+                      🏆
+                    </div>
+                    <div>
+                      <p className="font-semibold">Top Monthly Rank</p>
+                      <p className="text-sm text-blue-600">Get discount rewards</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <h2 className="text-xl font-bold text-red-600 mb-6">Profile Information</h2>
               
               <div className="grid grid-cols-2 gap-6">
@@ -616,7 +787,7 @@ const fetchBookings = async () => {
                 <div className="text-center py-8">
                   <div className="text-gray-500 text-lg mb-4">No current bookings found</div>
                   <button 
-                    onClick={() => window.location.href = '/booking'}
+                    onClick={() => navigate("/booking")}
                     className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 transition-colors"
                   >
                     Book a Bus
