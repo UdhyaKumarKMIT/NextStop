@@ -30,6 +30,7 @@ class NotificationScheduler {
 
   async checkAndSendReminders() {
     const now = new Date();
+    console.log(now);
     const twoHoursFromNow = new Date(now.getTime() + (2 * 60 * 60 * 1000));
 
     try {
