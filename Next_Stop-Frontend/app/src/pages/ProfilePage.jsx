@@ -3,7 +3,7 @@ import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-const API_BASE_URL = "http://localhost:5050/api";
+const API_BASE_URL = "http://4.188.80.153:5050/api";
 
 const ProfilePage = () => {
   const navigate = useNavigate();

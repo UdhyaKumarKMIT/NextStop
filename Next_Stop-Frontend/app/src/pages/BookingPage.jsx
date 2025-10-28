@@ -19,8 +19,8 @@ const BookingPage = () => {
   useEffect(() => {
     const fetchCitiesAndTypes = async () => {
       try {
-        const routesRes = await axios.get("http://localhost:5050/api/routes");
-        const busesRes = await axios.get("http://localhost:5050/api/buses");
+        const routesRes = await axios.get("http://4.188.80.153:5050/api/routes");
+        const busesRes = await axios.get("http://4.188.80.153:5050/api/buses");
 
         const uniqueCities = Array.from(
           new Set([
@@ -48,7 +48,7 @@ const BookingPage = () => {
 
     setError("");
     try {
-      const res = await axios.get("http://localhost:5050/api/buses/search", {
+      const res = await axios.get("http://4.188.80.153:5050/api/buses/search", {
         params: {
           source: fromCity,
           destination: toCity,

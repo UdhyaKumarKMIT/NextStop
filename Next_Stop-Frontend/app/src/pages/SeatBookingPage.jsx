@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import Navbar from "../components/Navbar";
 
-const API_BASE_URL = "http://localhost:5050/api";
+const API_BASE_URL = "http://4.188.80.153:5050/api";
 
 const SeatBookingPage = () => {
   const navigate = useNavigate();

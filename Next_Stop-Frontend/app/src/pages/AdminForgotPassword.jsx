@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 
-const API_BASE_URL = "http://localhost:5050/api";
+const API_BASE_URL = "http://4.188.80.153:5050/api";
 
 const AdminForgotPassword = () => {
   const [email, setEmail] = useState("");

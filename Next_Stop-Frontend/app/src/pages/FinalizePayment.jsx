@@ -5,7 +5,7 @@ import emailjs from "emailjs-com";
 import Navbar from "../components/Navbar";
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:5050/api";
+const API_BASE_URL = "http://4.188.80.153:5050/api";
 
 const FinalizePayment = () => {
   const location = useLocation();

@@ -1,7 +1,7 @@
 // src/services/registerAPI.jsx
 import axios from "axios";
 
-const API_URL = "http://localhost:5050/api/auth/register";
+const API_URL = "http://4.188.80.153:5050/api/auth/register";
 
 export const registerUser = async (userData) => {
   try {
