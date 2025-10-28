@@ -15,34 +15,37 @@ class NotificationScheduler {
     }
 
     // Run every 15 minutes
-    cron.schedule('*/15 * * * *', async () => {
-      try {
-        console.log('🕒 Running notification check at:', new Date().toLocaleString());
-        await this.checkAndSendReminders();
-      } catch (error) {
-        console.error('Error in notification scheduler:', error);
-      }
-    });
+    // Run every 15 seconds
+cron.schedule('*/15 * * * * *', async () => {
+  try {
+    console.log('🕒 Running notification check at:', new Date().toLocaleString());
+    await this.checkAndSendReminders();
+  } catch (error) {
+    console.error('Error in notification scheduler:', error);
+  }
+});
 
     this.isRunning = true;
     console.log('✅ Notification scheduler started (runs every 15 minutes)');
   }
+  
 
   async checkAndSendReminders() {
     const now = new Date();
-    console.log(now);
-    const twoHoursFromNow = new Date(now.getTime() + (2 * 60 * 60 * 1000));
-
-    try {
+    const offsetMs = 5.5 * 60 * 60 * 1000; // 5h30m offset
+    const nowIST = new Date(now.getTime() + offsetMs);
+    const twoHoursFromNowIST = new Date(nowIST.getTime() + 2 * 60 * 60 * 1000);
+    
+    console.log('IST window:', nowIST, twoHoursFromNowIST);
+       try {
       // Find confirmed bookings where journey date is within the next 2 hours
       const bookingsToRemind = await Booking.find({
         bookingStatus: 'Confirmed',
         journeyDate: {
-          $gte: now,
-          $lte: twoHoursFromNow
+          $gte: nowIST,
+          $lte: twoHoursFromNowIST
         }
       });
-
       console.log(`📧 Found ${bookingsToRemind.length} bookings within 2 hours`);
 
       // Send reminders for each booking
@@ -76,18 +79,24 @@ class NotificationScheduler {
   }
 
   cleanupSentReminders() {
-    const now = new Date().getTime();
-    const twoHoursAgo = now - (2 * 60 * 60 * 1000);
-    
-    // Remove entries older than 2 hours
+    // Get current time in IST
+    const nowUTC = new Date();
+    const offsetMs = 5.5 * 60 * 60 * 1000; // 5h 30m offset
+    const nowIST = new Date(nowUTC.getTime() + offsetMs);
+  
+    const twoHoursAgoIST = nowIST.getTime() - (2 * 60 * 60 * 1000);
+  
+    // Remove entries older than 2 hours (in IST)
     for (const key of this.sentReminders) {
       const [, timestamp] = key.split('_');
-      if (parseInt(timestamp) < twoHoursAgo) {
+      if (parseInt(timestamp) < twoHoursAgoIST) {
         this.sentReminders.delete(key);
       }
     }
+  
+    console.log('🧹 Cleared sent reminders older than 2 hours (IST)');
   }
-
+  
   // Manual trigger for testing
   async sendTestReminder(bookingId) {
     try {
