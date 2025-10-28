@@ -6,7 +6,7 @@ const path = require("path");
 const Seat = require("../models/Seat");
 
 // MongoDB Database name → "NextStop"
-const DB_URI = "mongodb://localhost:27017/NextStop";
+const DB_URI = "mongodb+srv://udhya:2004@nextstopdb.vov7emc.mongodb.net/NextStopDB?retryWrites=true&w=majority";
 
 // Utility function to load JSON
 function loadJson(filePath) {
